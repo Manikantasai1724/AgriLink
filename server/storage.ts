@@ -1,0 +1,1379 @@
+import type {
+  InsertNotification,
+  InsertOwnershipTransfer,
+  InsertProduct,
+  InsertProductComment,
+  InsertProductRating,
+  InsertProductOwner,
+  InsertQualityCheck,
+  InsertScan,
+  InsertTransaction,
+  InsertUser,
+  Notification,
+  OwnershipTransfer,
+  Product,
+  ProductComment,
+  ProductRating,
+  ProductOwner,
+  QualityCheck,
+  Scan,
+  Transaction,
+  User,
+  MarketPrice,
+  BuyerDemand,
+  ProduceLot,
+  AgriOffer,
+  AgriTransaction,
+  LogisticsOption,
+  StorageFacility,
+  Dispute,
+  FpoMember,
+} from "@shared/schema";
+import { createHash, randomUUID } from "crypto";
+import { config } from "dotenv";
+import { type Db, MongoClient } from "mongodb";
+import {
+  INITIAL_MARKET_PRICES,
+  INITIAL_BUYER_DEMANDS,
+  INITIAL_LOGISTICS_OPTIONS,
+  INITIAL_STORAGE_FACILITIES,
+} from "./data/marketData";
+import dns from "dns";
+
+config();
+
+// Fix Windows Node.js querySrv ECONNREFUSED issue by using public reliable DNS resolvers
+try {
+  dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
+} catch {
+  // ignore if not supported in environment
+}
+
+let db: Db | null = null;
+
+export async function getDb(): Promise<Db> {
+  if (db) return db;
+
+  const rawUri = process.env.MONGODB_URI?.trim();
+  if (!rawUri) {
+    throw new Error(
+      "MONGODB_URI is not set. Copy .env.example to .env and configure your MongoDB connection string.",
+    );
+  }
+
+  // Strip accidental angle brackets around password if present (e.g. <password> -> password)
+  const uri = rawUri.replace(/<([^>]+)>/g, "$1");
+
+  const client = new MongoClient(uri);
+  await client.connect();
+
+  db = client.db(process.env.MONGO_DB_NAME || "krishisetu");
+  return db;
+}
+
+export class MongoStorage {
+  /**
+   * Get the latest active (pending/accepted) ownership transfer for a product.
+   * Only returns transfers with status 'pending' or 'accepted'.
+   */
+  public async getLatestActiveOwnershipTransfer(
+    productId: string,
+  ): Promise<OwnershipTransfer | null> {
+    const db = await getDb();
+    // Find the most recent transfer for this product with status 'pending' or 'accepted'
+    return db
+      .collection<OwnershipTransfer>("ownershiptransfers")
+      .find({ productId, status: { $in: ["pending", "accepted"] } })
+      .sort({ timestamp: -1 })
+      .limit(1)
+      .next();
+  }
+
+  /**
+   * Update delivery status fields for an ownership transfer (non-breaking, adds fields if not present).
+   * @param id Transfer ID
+   * @param deliveryFields Fields to update (e.g., deliveryStatus, outForDeliveryAt)
+   */
+  public async updateOwnershipTransferDeliveryStatus(
+    id: string,
+    deliveryFields: Partial<{ deliveryStatus: string; outForDeliveryAt: Date }>,
+  ): Promise<OwnershipTransfer | null> {
+    const db = await getDb();
+    const result = await db
+      .collection<OwnershipTransfer>("ownershiptransfers")
+      .findOneAndUpdate({ id }, { $set: deliveryFields }, { returnDocument: "after" });
+    if (!result) return null;
+    return result as OwnershipTransfer;
+  }
+  // -------- Helper Methods --------
+  private generateOwnershipHash(
+    productId: string,
+    ownerId: string,
+    blockNumber: number,
+    previousHash: string | null,
+  ): string {
+    const data = `${productId}-${ownerId}-${blockNumber}-${previousHash || "genesis"}`;
+    return createHash("sha256").update(data).digest("hex");
+  }
+
+  private async getNextBlockNumber(productId: string): Promise<number> {
+    const db = await getDb();
+    const lastOwner = await db
+      .collection<ProductOwner>("product_owners")
+      .findOne({ productId }, { sort: { blockNumber: -1 } });
+    return (lastOwner?.blockNumber || 0) + 1;
+  }
+
+  private async getLastOwnershipHash(productId: string): Promise<string | null> {
+    const db = await getDb();
+    const lastOwner = await db
+      .collection<ProductOwner>("product_owners")
+      .findOne({ productId }, { sort: { blockNumber: -1 } });
+    return lastOwner?.ownershipHash || null;
+  }
+
+  // -------- User Operations --------
+  async getUser(id: string): Promise<User | null> {
+    const db = await getDb();
+    return db.collection<User>("users").findOne({ id });
+  }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    const db = await getDb();
+    return db.collection<User>("users").findOne({ email: email.toLowerCase() });
+  }
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    const db = await getDb();
+    return db.collection<User>("users").findOne({ username: username.toLowerCase() });
+  }
+
+  async getUserByEmailOrUsername(identifier: string): Promise<User | null> {
+    const db = await getDb();
+    const cleanId = identifier.trim().toLowerCase();
+    return db.collection<User>("users").findOne({
+      $or: [{ email: cleanId }, { username: cleanId }],
+    });
+  }
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | null> {
+    const db = await getDb();
+    return db.collection<User>("users").findOne({
+      $or: [{ firebaseUid }, { id: firebaseUid }],
+    });
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    const db = await getDb();
+    return db.collection<User>("users").find({}).sort({ createdAt: -1 }).toArray();
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const db = await getDb();
+    const user: User = {
+      ...insertUser,
+      id: randomUUID(),
+      email: insertUser.email.toLowerCase(),
+      username: insertUser.username.toLowerCase(),
+      role: insertUser.role || "farmer",
+      password: insertUser.password || null,
+      firebaseUid: insertUser.firebaseUid || null,
+      profileImage: insertUser.profileImage || null,
+      phone: insertUser.phone || null,
+      company: insertUser.company || null,
+      location: insertUser.location || null,
+      bio: insertUser.bio || null,
+      website: insertUser.website || null,
+      roleSelected: insertUser.roleSelected !== undefined ? insertUser.roleSelected : true,
+      language: insertUser.language || "en",
+      notificationsEnabled: insertUser.notificationsEnabled !== false,
+      createdAt: new Date(),
+    };
+    await db.collection<User>("users").insertOne(user);
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+    const db = await getDb();
+    const result = await db
+      .collection<User>("users")
+      .findOneAndUpdate({ id }, { $set: updates }, { returnDocument: "after" });
+    if (!result) return null;
+    return result as User;
+  }
+
+  // -------- Product Operations --------
+  async getProduct(id: string): Promise<Product | null> {
+    const db = await getDb();
+    return db.collection<Product>("products").findOne({ id });
+  }
+
+  async getProductByBatchId(batchId: string): Promise<Product | null> {
+    const db = await getDb();
+    return db.collection<Product>("products").findOne({ batchId });
+  }
+
+  async getProductsByUser(userId: string): Promise<Product[]> {
+    const db = await getDb();
+    return db.collection<Product>("products").find({ ownerId: userId }).toArray();
+  }
+
+  async getAllProducts(limit?: number): Promise<Product[]> {
+    const db = await getDb();
+    let cursor = db.collection<Product>("products").find({});
+    if (limit) cursor = cursor.limit(limit);
+    const products = await cursor.toArray();
+    return products;
+  }
+
+  async getAvailableProducts(excludeUserId: string): Promise<Product[]> {
+    const db = await getDb();
+    return db
+      .collection<Product>("products")
+      .find({ ownerId: { $ne: excludeUserId } })
+      .toArray();
+  }
+
+  async countProducts(): Promise<number> {
+    const db = await getDb();
+    return await db.collection("products").countDocuments();
+  }
+
+  async countUsers(): Promise<number> {
+    const db = await getDb();
+    return await db.collection("users").countDocuments();
+  }
+
+  async countScans(): Promise<number> {
+    const db = await getDb();
+    return await db.collection("scans").countDocuments();
+  }
+
+  async countTransfers(): Promise<number> {
+    const db = await getDb();
+    return await db.collection("ownershiptransfers").countDocuments();
+  }
+
+  async getRecentScans(limit: number = 5, userId?: string): Promise<any[]> {
+    const db = await getDb();
+    const filter = userId ? { userId } : {};
+    return db.collection("scans").find(filter).sort({ timestamp: -1 }).limit(limit).toArray();
+  }
+  async getUserScans(userId: string): Promise<Scan[]> {
+    const db = await getDb();
+    const scans = await db.collection<Scan>("scans").find({ userId }).toArray();
+    return scans;
+  }
+
+  // Get all notifications for a user, newest first
+  async getUserNotifications(userId: string): Promise<Notification[]> {
+    const db = await getDb();
+    return db
+      .collection<Notification>("notifications")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  // Mark a notification as read
+  async markNotificationRead(notificationId: string): Promise<void> {
+    const db = await getDb();
+    await db
+      .collection("notifications")
+      .updateOne({ id: notificationId }, { $set: { read: true } });
+  }
+
+  // Create a notification
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const db = await getDb();
+    const notification: Notification = {
+      ...insertNotification,
+      id: randomUUID(),
+      read: insertNotification.read ?? false,
+      productId: insertNotification.productId || undefined,
+      transferId: insertNotification.transferId || undefined,
+      fromUserId: insertNotification.fromUserId || undefined,
+      createdAt: new Date(),
+    };
+    await db.collection<Notification>("notifications").insertOne(notification);
+    return notification;
+  }
+
+  async searchProducts(query: string): Promise<Product[]> {
+    const db = await getDb();
+    return db
+      .collection<Product>("products")
+      .find({
+        $or: [
+          { name: { $regex: query, $options: "i" } },
+          { category: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+          { farmName: { $regex: query, $options: "i" } },
+        ],
+      })
+      .limit(50)
+      .toArray();
+  }
+
+  async createProduct(insertProduct: InsertProduct): Promise<Product> {
+    const db = await getDb();
+
+    // Use a hash for batchId based on product name, farmName, and createdAt
+    const createdAt = new Date();
+    const batchId =
+      insertProduct.batchId ||
+      createHash("sha256")
+        .update(`${insertProduct.name}-${insertProduct.farmName}-${createdAt.toISOString()}`)
+        .digest("hex")
+        .slice(0, 10);
+
+    // Use a hash for blockchainHash based on product data and batchId
+    const blockchainHash =
+      insertProduct.blockchainHash ||
+      createHash("sha256")
+        .update(`${insertProduct.name}-${batchId}-${createdAt.toISOString()}`)
+        .digest("hex");
+
+    // Generate qrCode if not provided (example: use batchId in a URL)
+    const qrCode = insertProduct.qrCode || `/product/${batchId}`;
+
+    const product: Product = {
+      ...insertProduct,
+      id: randomUUID(),
+      quantity: String(insertProduct.quantity),
+      description: insertProduct.description || null,
+      certifications: insertProduct.certifications || null,
+      status: insertProduct.status || "registered",
+      batchId,
+      qrCode,
+      blockchainHash,
+      price: insertProduct.price || null, // Add price handling
+      averageRating: 0,
+      ratingCount: 0,
+      ratingSum: 0,
+      createdAt,
+    };
+    await db.collection<Product>("products").insertOne(product);
+    return product;
+  }
+
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
+    const db = await getDb();
+    const result = await db
+      .collection<Product>("products")
+      .findOneAndUpdate({ id }, { $set: updates }, { returnDocument: "after" });
+    if (!result) return null;
+    return result as Product;
+  }
+
+  // Get products by owner with sorting
+  async getProductsByOwner(
+    ownerId: string,
+    limit?: number,
+    sortBy: "newest" | "oldest" = "newest",
+  ): Promise<Product[]> {
+    const db = await getDb();
+    let cursor = db
+      .collection<Product>("products")
+      .find({ ownerId })
+      .sort({ createdAt: sortBy === "newest" ? -1 : 1 });
+
+    if (limit) cursor = cursor.limit(limit);
+    const products = await cursor.toArray();
+    return products;
+  }
+
+  // Search products by owner with filters
+  async searchProductsByOwner(ownerId: string, query: string): Promise<Product[]> {
+    const db = await getDb();
+    return db
+      .collection<Product>("products")
+      .find({
+        ownerId,
+        $or: [
+          { name: { $regex: query, $options: "i" } },
+          { category: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+          { farmName: { $regex: query, $options: "i" } },
+          { batchId: { $regex: query, $options: "i" } },
+        ],
+      })
+      .sort({ createdAt: -1 }) // Newest first
+      .limit(50)
+      .toArray();
+  }
+
+  // -------- Transaction Operations --------
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const db = await getDb();
+    const transaction: Transaction = {
+      ...insertTransaction,
+      id: randomUUID(),
+      location: insertTransaction.location || null,
+      fromUserId: insertTransaction.fromUserId || null,
+      toUserId: insertTransaction.toUserId || null,
+      coordinates: insertTransaction.coordinates || null,
+      temperature: insertTransaction.temperature || null,
+      humidity: insertTransaction.humidity || null,
+      notes: insertTransaction.notes || null,
+      blockchainHash: insertTransaction.blockchainHash || null,
+      verified: insertTransaction.verified ?? false,
+      timestamp: new Date(),
+    };
+    await db.collection<Transaction>("transactions").insertOne(transaction);
+    return transaction;
+  }
+
+  // -------- QualityCheck Operations --------
+  async createQualityCheck(insertQualityCheck: InsertQualityCheck): Promise<QualityCheck> {
+    const db = await getDb();
+    const qualityCheck: QualityCheck = {
+      ...insertQualityCheck,
+      id: randomUUID(),
+      notes: insertQualityCheck.notes || null,
+      certificationUrl: insertQualityCheck.certificationUrl || null,
+      verified: false,
+      timestamp: new Date(),
+    };
+    await db.collection<QualityCheck>("qualitychecks").insertOne(qualityCheck);
+    return qualityCheck;
+  }
+
+  // -------- Scan Operations --------
+  async createScan(insertScan: InsertScan): Promise<Scan> {
+    const db = await getDb();
+    const scan: Scan = {
+      ...insertScan,
+      id: randomUUID(),
+      location: insertScan.location || null,
+      userId: insertScan.userId || null,
+      coordinates: insertScan.coordinates || null,
+      timestamp: new Date(),
+    };
+    await db.collection<Scan>("scans").insertOne(scan);
+    return scan;
+  }
+
+  // -------- OwnershipTransfer Operations --------
+  async createOwnershipTransfer(
+    insertOwnershipTransfer: InsertOwnershipTransfer,
+  ): Promise<OwnershipTransfer> {
+    const db = await getDb();
+    const transfer: OwnershipTransfer = {
+      ...insertOwnershipTransfer,
+      id: randomUUID(),
+      status: insertOwnershipTransfer.status || "pending",
+      notes: insertOwnershipTransfer.notes || null,
+      expectedDelivery: insertOwnershipTransfer.expectedDelivery || null,
+      actualDelivery: insertOwnershipTransfer.actualDelivery || null,
+      blockchainHash: insertOwnershipTransfer.blockchainHash || null,
+      timestamp: new Date(),
+    };
+    await db.collection<OwnershipTransfer>("ownershiptransfers").insertOne(transfer);
+    return transfer;
+  }
+
+  // -------- OwnershipTransfer Operations --------
+  async getOwnershipTransfer(id: string): Promise<OwnershipTransfer | null> {
+    const db = await getDb();
+    return db.collection<OwnershipTransfer>("ownershiptransfers").findOne({ id });
+  }
+
+  async updateOwnershipTransfer(
+    id: string,
+    updates: Partial<OwnershipTransfer>,
+  ): Promise<OwnershipTransfer | null> {
+    const db = await getDb();
+    const result = await db
+      .collection<OwnershipTransfer>("ownershiptransfers")
+      .findOneAndUpdate({ id }, { $set: updates }, { returnDocument: "after" });
+    if (!result) return null;
+    return result as OwnershipTransfer;
+  }
+
+  async getPendingTransfersForUser(userId: string): Promise<OwnershipTransfer[]> {
+    const db = await getDb();
+    return db
+      .collection<OwnershipTransfer>("ownershiptransfers")
+      .find({ toUserId: userId, status: "pending" })
+      .toArray();
+  }
+
+  // -------- ProductOwner Operations (Blockchain-style) --------
+  async addProductOwner(insertProductOwner: InsertProductOwner): Promise<ProductOwner> {
+    const db = await getDb();
+
+    // Get blockchain-style data
+    const blockNumber = await this.getNextBlockNumber(insertProductOwner.productId);
+    const previousOwnerHash = await this.getLastOwnershipHash(insertProductOwner.productId);
+    const ownershipHash = this.generateOwnershipHash(
+      insertProductOwner.productId,
+      insertProductOwner.ownerId,
+      blockNumber,
+      previousOwnerHash,
+    );
+
+    const owner: ProductOwner = {
+      ...insertProductOwner,
+      id: randomUUID(),
+      blockNumber,
+      previousOwnerHash,
+      ownershipHash,
+      transferType: insertProductOwner.transferType || (blockNumber === 1 ? "initial" : "transfer"),
+      createdAt: new Date(),
+    };
+
+    await db.collection<ProductOwner>("product_owners").insertOne(owner);
+    return owner;
+  }
+
+  async getProductOwners(productId: string): Promise<ProductOwner[]> {
+    const db = await getDb();
+    return db
+      .collection<ProductOwner>("product_owners")
+      .find({ productId })
+      .sort({ blockNumber: 1 }) // Sort by blockchain order
+      .toArray();
+  }
+
+  async getOwnershipChain(productId: string): Promise<ProductOwner[]> {
+    return this.getProductOwners(productId); // Same as getProductOwners but with clear naming
+  }
+
+  async getOwnershipHistory(ownerId: string): Promise<
+    {
+      productId: string;
+      productName: string;
+      ownershipRecords: ProductOwner[];
+    }[]
+  > {
+    const db = await getDb();
+
+    // Find all ownership records for this owner
+    const ownershipRecords = await db
+      .collection<ProductOwner>("product_owners")
+      .find({ ownerId })
+      .toArray();
+
+    // Group by product
+    const productMap = new Map<string, ProductOwner[]>();
+
+    ownershipRecords.forEach((record) => {
+      if (!productMap.has(record.productId)) {
+        productMap.set(record.productId, []);
+      }
+      productMap.get(record.productId)!.push(record);
+    });
+
+    // Get product details for each product
+    const result: {
+      productId: string;
+      productName: string;
+      ownershipRecords: ProductOwner[];
+    }[] = [];
+
+    // Use Array.from to handle the Map entries in a more TypeScript-friendly way
+    const entries = Array.from(productMap.entries());
+    for (let i = 0; i < entries.length; i++) {
+      const [productId, records] = entries[i];
+      const product = await this.getProduct(productId);
+      if (product) {
+        result.push({
+          productId,
+          productName: product.name,
+          ownershipRecords: records.sort(
+            (a: ProductOwner, b: ProductOwner) => (a.blockNumber || 0) - (b.blockNumber || 0),
+          ),
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async hasUserOwnedProduct(productId: string, userId: string): Promise<boolean> {
+    const db = await getDb();
+
+    // Check if user has ever owned this product
+    const record = await db
+      .collection<ProductOwner>("product_owners")
+      .findOne({ productId, ownerId: userId });
+
+    return !!record;
+  }
+
+  async verifyOwnershipChain(productId: string): Promise<{
+    valid: boolean;
+    errors?: Array<{ blockNumber: number; message: string }>;
+  }> {
+    const chain = await this.getProductOwners(productId);
+
+    // If chain is empty or has only one block, it's valid by default
+    if (chain.length <= 1) {
+      return { valid: true };
+    }
+
+    const errors: Array<{ blockNumber: number; message: string }> = [];
+
+    // Verify each block in the chain starting from the second one
+    for (let i = 1; i < chain.length; i++) {
+      const currentBlock = chain[i];
+      const previousBlock = chain[i - 1];
+
+      // 1. Check if previous hash matches
+      if (currentBlock.previousOwnerHash !== previousBlock.ownershipHash) {
+        errors.push({
+          blockNumber: currentBlock.blockNumber!,
+          message: "Previous hash mismatch - chain integrity compromised",
+        });
+      }
+
+      // 2. Validate block number is sequential
+      if (currentBlock.blockNumber !== previousBlock.blockNumber! + 1) {
+        errors.push({
+          blockNumber: currentBlock.blockNumber!,
+          message: "Block number sequence broken",
+        });
+      }
+
+      // 3. Recalculate and verify hash
+      const expectedHash = this.generateOwnershipHash(
+        currentBlock.productId,
+        currentBlock.ownerId,
+        currentBlock.blockNumber!,
+        currentBlock.previousOwnerHash || null,
+      );
+
+      if (expectedHash !== currentBlock.ownershipHash) {
+        errors.push({
+          blockNumber: currentBlock.blockNumber!,
+          message: "Hash verification failed - data may have been tampered with",
+        });
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
+  // -------- ProductComment Operations --------
+  async addProductComment(insertProductComment: InsertProductComment): Promise<ProductComment> {
+    const db = await getDb();
+    const comment: ProductComment = {
+      ...insertProductComment,
+      id: randomUUID(),
+      createdAt: new Date(),
+    };
+    await db.collection<ProductComment>("product_comments").insertOne(comment);
+    return comment;
+  }
+
+  // -------- ProductRating Operations --------
+  async getProductRatingSummary(productId: string): Promise<{
+    averageRating: number;
+    ratingCount: number;
+    ratingSum: number;
+  }> {
+    const db = await getDb();
+    const [summary] = await db
+      .collection<ProductRating>("product_ratings")
+      .aggregate([
+        { $match: { productId } },
+        {
+          $group: {
+            _id: null,
+            ratingCount: { $sum: 1 },
+            ratingSum: { $sum: "$rating" },
+            averageRating: { $avg: "$rating" },
+          },
+        },
+      ])
+      .toArray();
+
+    return {
+      averageRating: summary?.averageRating ?? 0,
+      ratingCount: summary?.ratingCount ?? 0,
+      ratingSum: summary?.ratingSum ?? 0,
+    };
+  }
+
+  async refreshProductRatingSummary(productId: string): Promise<{
+    averageRating: number;
+    ratingCount: number;
+    ratingSum: number;
+  }> {
+    const db = await getDb();
+    const summary = await this.getProductRatingSummary(productId);
+
+    await db.collection<Product>("products").updateOne(
+      { id: productId },
+      {
+        $set: {
+          averageRating: summary.averageRating,
+          ratingCount: summary.ratingCount,
+          ratingSum: summary.ratingSum,
+        },
+      },
+    );
+
+    return summary;
+  }
+
+  async getProductRating(productId: string, userId: string): Promise<ProductRating | null> {
+    const db = await getDb();
+    return db.collection<ProductRating>("product_ratings").findOne({ productId, userId });
+  }
+
+  async upsertProductRating(
+    insertProductRating: InsertProductRating,
+  ): Promise<ProductRating> {
+    const db = await getDb();
+    const rating: ProductRating = {
+      ...insertProductRating,
+      id: randomUUID(),
+      review: insertProductRating.review ?? null,
+      createdAt: insertProductRating.createdAt ?? new Date(),
+    };
+
+    await db.collection<ProductRating>("product_ratings").updateOne(
+      {
+        productId: rating.productId,
+        userId: rating.userId,
+      },
+      {
+        $set: rating,
+      },
+      { upsert: true },
+    );
+
+    await this.refreshProductRatingSummary(rating.productId);
+    return rating;
+  }
+
+  async getProductRatings(productId: string): Promise<ProductRating[]> {
+    const db = await getDb();
+    return db
+      .collection<ProductRating>("product_ratings")
+      .find({ productId })
+      .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  async getProductComments(productId: string): Promise<ProductComment[]> {
+    const db = await getDb();
+    return db
+      .collection<ProductComment>("product_comments")
+      .find({ productId })
+      .sort({ createdAt: 1 })
+      .toArray();
+  }
+
+  // -------- Custom Query Methods for Journey Route --------
+  async getTransactionsByProductId(productId: string): Promise<Transaction[]> {
+    const db = await getDb();
+    return db
+      .collection<Transaction>("transactions")
+      .find({ productId })
+      .sort({ timestamp: 1 })
+      .toArray();
+  }
+
+  async getScansByProductId(productId: string): Promise<Scan[]> {
+    const db = await getDb();
+    return db.collection<Scan>("scans").find({ productId }).sort({ timestamp: 1 }).toArray();
+  }
+
+  async searchUsers(query: string, limit = 10): Promise<any[]> {
+    try {
+      const db = await getDb();
+      const users = await db
+        .collection("users")
+        .find({
+          $or: [
+            { name: { $regex: query, $options: "i" } },
+            { username: { $regex: query, $options: "i" } },
+            { email: { $regex: query, $options: "i" } },
+          ],
+        })
+        .limit(limit)
+        .toArray();
+
+      return users.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        profileImage: u.profileImage || null,
+      }));
+    } catch (error) {
+      console.error("Error searching users:", error);
+      return []; // Return empty array on error, don't throw
+    }
+  }
+
+  // Get complete journey data for a product (supply chain map)
+  async getProductJourney(productId: string): Promise<any[]> {
+    const db = await getDb();
+
+    // Get product info
+    const product = await this.getProduct(productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Get ownership history
+    const ownershipChain = await this.getOwnershipChain(productId);
+
+    // Get transactions and scans
+    const transactions = await this.getTransactionsByProductId(productId);
+    const scans = await this.getScansByProductId(productId);
+
+    // Build journey locations
+    const journeyLocations: any[] = [];
+
+    // Add initial creation location (farm)
+    if (product) {
+      const initialOwner = ownershipChain.find((owner) => owner.blockNumber === 1);
+
+      if (initialOwner) {
+        journeyLocations.push({
+          id: `origin-${product.id}`,
+          name: product.farmName,
+          role: initialOwner.role,
+          latitude: this.getRandomCoordinate(37.7749, 0.5),
+          longitude: this.getRandomCoordinate(-122.4194, 0.5),
+          timestamp: product.createdAt.toISOString(),
+          status: "Origin",
+        });
+      }
+    }
+
+    // Add transaction locations
+    if (transactions && transactions.length > 0) {
+      for (const transaction of transactions) {
+        journeyLocations.push({
+          id: transaction.id,
+          name: transaction.location || "Unknown location",
+          role: "distributor",
+          latitude: this.getRandomCoordinate(37.7749, 1),
+          longitude: this.getRandomCoordinate(-122.4194, 1),
+          timestamp: transaction.timestamp.toISOString(),
+          status: transaction.transactionType,
+        });
+      }
+    }
+
+    // Add scan locations
+    if (scans && scans.length > 0) {
+      for (const scan of scans) {
+        let userRole = "consumer";
+        let userName = "Unknown user";
+
+        if (scan.userId) {
+          const scanUser = await this.getUser(scan.userId);
+          if (scanUser) {
+            userRole = scanUser.role;
+            userName = scanUser.name;
+          }
+        }
+
+        journeyLocations.push({
+          id: scan.id,
+          name: userName,
+          role: userRole,
+          latitude: scan.coordinates?.latitude || this.getRandomCoordinate(37.7749, 1.5),
+          longitude: scan.coordinates?.longitude || this.getRandomCoordinate(-122.4194, 1.5),
+          timestamp: scan.timestamp.toISOString(),
+          status: "Scan",
+        });
+      }
+    }
+
+    return journeyLocations;
+  }
+
+  // Helper function to generate random coordinates for demo
+  private getRandomCoordinate(base: number, range: number): number {
+    return base + (Math.random() * 2 - 1) * range;
+  }
+
+  // -------- Product Event Logging --------
+  async logProductEvent(
+    productId: string,
+    eventType: string,
+    message: string,
+    userId: string,
+    extra?: any,
+  ) {
+    const db = await getDb();
+    const event = {
+      id: randomUUID(),
+      productId,
+      eventType,
+      message,
+      userId,
+      extra: extra || null,
+      createdAt: new Date(),
+    };
+    await db.collection("product_events").insertOne(event);
+    return event;
+  }
+
+  async getProductEvents(productId: string): Promise<any[]> {
+    const db = await getDb();
+    return db.collection("product_events").find({ productId }).sort({ createdAt: 1 }).toArray();
+  }
+
+  // ==========================================
+  // AGRILINK STORAGE METHODS
+  // ==========================================
+
+  async seedAgriLinkDefaults(): Promise<void> {
+    const db = await getDb();
+    
+    // Upsert fresh market prices (ensuring Bhimavaram & West Godavari data is present)
+    for (const p of INITIAL_MARKET_PRICES) {
+      await db.collection("agri_market_prices").updateOne({ id: p.id }, { $set: p }, { upsert: true });
+    }
+    console.log(`[AgriLink] Synced ${INITIAL_MARKET_PRICES.length} market prices.`);
+
+    for (const d of INITIAL_BUYER_DEMANDS) {
+      await db.collection("agri_buyer_demands").updateOne({ id: d.id }, { $set: d }, { upsert: true });
+    }
+    console.log(`[AgriLink] Synced ${INITIAL_BUYER_DEMANDS.length} buyer demands.`);
+
+    for (const l of INITIAL_LOGISTICS_OPTIONS) {
+      await db.collection("agri_logistics").updateOne({ id: l.id }, { $set: l }, { upsert: true });
+    }
+    console.log(`[AgriLink] Synced ${INITIAL_LOGISTICS_OPTIONS.length} logistics options.`);
+
+    for (const s of INITIAL_STORAGE_FACILITIES) {
+      await db.collection("agri_storage").updateOne({ id: s.id }, { $set: s }, { upsert: true });
+    }
+    console.log(`[AgriLink] Synced ${INITIAL_STORAGE_FACILITIES.length} storage facilities.`);
+  }
+
+  // Market Prices
+  async getMarketPrices(crop?: string, district?: string): Promise<MarketPrice[]> {
+    try {
+      const db = await getDb();
+      const query: any = {};
+      if (crop && crop !== "all") {
+        query.crop = { $regex: new RegExp(`^${crop}$`, "i") };
+      }
+      if (district && district !== "all") {
+        query.district = { $regex: new RegExp(district, "i") };
+      }
+      const prices = await db.collection<MarketPrice>("agri_market_prices").find(query).toArray();
+      if (prices.length > 0) {
+        return prices;
+      }
+    } catch (e) {
+      console.error("[AgriLink] Error querying market prices from DB, using fallback", e);
+    }
+
+    // Fallback to in-memory INITIAL_MARKET_PRICES
+    let filtered = [...INITIAL_MARKET_PRICES];
+    if (crop && crop !== "all") {
+      filtered = filtered.filter((p) => p.crop.toLowerCase() === crop.toLowerCase());
+    }
+    if (district && district !== "all") {
+      filtered = filtered.filter((p) => p.district.toLowerCase().includes(district.toLowerCase()));
+    }
+    return filtered;
+  }
+
+  // Buyer Demand
+  async getBuyerDemands(crop?: string): Promise<BuyerDemand[]> {
+    try {
+      const db = await getDb();
+      const query: any = { active: true };
+      if (crop && crop !== "all") {
+        query.crop = { $regex: new RegExp(`^${crop}$`, "i") };
+      }
+      const demands = await db.collection<BuyerDemand>("agri_buyer_demands").find(query).sort({ createdAt: -1 }).toArray();
+      if (demands.length > 0) {
+        return demands;
+      }
+    } catch (e) {
+      console.error("[AgriLink] Error querying buyer demands from DB, using fallback", e);
+    }
+
+    // Fallback to in-memory INITIAL_BUYER_DEMANDS
+    if (crop && crop !== "all") {
+      return INITIAL_BUYER_DEMANDS.filter((d) => d.crop.toLowerCase() === crop.toLowerCase());
+    }
+    return INITIAL_BUYER_DEMANDS;
+  }
+
+  async createBuyerDemand(demand: Partial<BuyerDemand>): Promise<BuyerDemand> {
+    const db = await getDb();
+    const record: BuyerDemand = {
+      id: demand.id || `dem-${randomUUID().slice(0, 8)}`,
+      buyerId: demand.buyerId || "unknown",
+      buyerName: demand.buyerName || "Verified Buyer",
+      buyerType: demand.buyerType || "Processor",
+      verificationStatus: demand.verificationStatus || "Verified",
+      crop: demand.crop || "Tomato",
+      variety: demand.variety || "",
+      requiredQuantity: Number(demand.requiredQuantity) || 100,
+      unit: demand.unit || "Quintal",
+      minQualityGrade: demand.minQualityGrade || "Grade A",
+      location: demand.location || "Nashik",
+      distanceKm: demand.distanceKm || 30,
+      pickupRequirement: demand.pickupRequirement || "Buyer Pickup",
+      expectedDeliveryDate: demand.expectedDeliveryDate || new Date(Date.now() + 86400000 * 5).toISOString().split("T")[0],
+      targetPricePerUnit: Number(demand.targetPricePerUnit) || 2500,
+      paymentTerms: demand.paymentTerms || "Direct Bank Transfer on Delivery",
+      reliabilityScore: demand.reliabilityScore || 4.8,
+      active: true,
+      createdAt: new Date(),
+    };
+    await db.collection("agri_buyer_demands").insertOne(record as any);
+    return record;
+  }
+
+  // Produce Lots
+  async getProduceLots(sellerId?: string, crop?: string): Promise<ProduceLot[]> {
+    const db = await getDb();
+    const query: any = {};
+    if (sellerId) {
+      query.sellerId = sellerId;
+    }
+    if (crop && crop !== "all") {
+      query.crop = { $regex: new RegExp(`^${crop}$`, "i") };
+    }
+    return db.collection<ProduceLot>("agri_produce_lots").find(query).sort({ createdAt: -1 }).toArray();
+  }
+
+  async getProduceLotById(id: string): Promise<ProduceLot | null> {
+    const db = await getDb();
+    return db.collection<ProduceLot>("agri_produce_lots").findOne({ $or: [{ id }, { lotNumber: id }] });
+  }
+
+  async createProduceLot(lot: Partial<ProduceLot>): Promise<ProduceLot> {
+    const db = await getDb();
+    const cropCode = (lot.crop || "CRP").substring(0, 3).toUpperCase();
+    const year = new Date().getFullYear();
+    const randNum = Math.floor(100000 + Math.random() * 900000);
+    const lotNumber = lot.lotNumber || `AGL-${cropCode}-${year}-${randNum}`;
+
+    const record: ProduceLot = {
+      id: lot.id || `lot-${randomUUID().slice(0, 8)}`,
+      lotNumber,
+      sellerId: lot.sellerId || "anonymous",
+      sellerName: lot.sellerName || "Farmer",
+      sellerRole: (lot.sellerRole as any) || "farmer",
+      crop: lot.crop || "Tomato",
+      variety: lot.variety || "Hybrid",
+      quantity: Number(lot.quantity) || 50,
+      unit: lot.unit || "Quintal",
+      harvestDate: lot.harvestDate || new Date().toISOString().split("T")[0],
+      expectedSellingDate: lot.expectedSellingDate || new Date().toISOString().split("T")[0],
+      location: lot.location || "Bhimavaram, West Godavari, Andhra Pradesh",
+      preferredMarket: lot.preferredMarket || "Bhimavaram Market Yard",
+      expectedPricePerUnit: Number(lot.expectedPricePerUnit) || 2600,
+      qualityGrade: (lot.qualityGrade as any) || "Grade A",
+      qualityParameters: lot.qualityParameters || {
+        moisturePercent: 12,
+        defectPercent: 2,
+        sizeCategory: "Medium (50-65mm)",
+        colorUniformity: "Consistent Red",
+        aiAssistedGrade: "Grade A",
+      },
+      images: lot.images || [],
+      certifications: lot.certifications || [],
+      storageRequirement: lot.storageRequirement || "",
+      pickupRequirement: (lot.pickupRequirement as any) || "Buyer Pickup",
+      status: (lot.status as any) || "Available",
+      fpoAggregated: Boolean(lot.fpoAggregated),
+      fpoMemberContributors: lot.fpoMemberContributors || [],
+      createdAt: new Date(),
+    };
+
+    await db.collection("agri_produce_lots").insertOne(record as any);
+    return record;
+  }
+
+  async updateProduceLotStatus(id: string, status: string): Promise<ProduceLot | null> {
+    const db = await getDb();
+    const result = await db.collection<ProduceLot>("agri_produce_lots").findOneAndUpdate(
+      { $or: [{ id }, { lotNumber: id }] },
+      { $set: { status: status as any } },
+      { returnDocument: "after" }
+    );
+    return (result as any) || null;
+  }
+
+  // Offers
+  async getOffers(sellerId?: string, buyerId?: string, lotId?: string): Promise<AgriOffer[]> {
+    const db = await getDb();
+    const query: any = {};
+    if (sellerId) query.sellerId = sellerId;
+    if (buyerId) query.buyerId = buyerId;
+    if (lotId) query.lotId = lotId;
+    return db.collection<AgriOffer>("agri_offers").find(query).sort({ createdAt: -1 }).toArray();
+  }
+
+  async createOffer(offer: Partial<AgriOffer>): Promise<AgriOffer> {
+    const db = await getDb();
+    const record: AgriOffer = {
+      id: offer.id || `off-${randomUUID().slice(0, 8)}`,
+      lotId: offer.lotId || "",
+      lotNumber: offer.lotNumber || "",
+      crop: offer.crop || "Tomato",
+      sellerId: offer.sellerId || "",
+      buyerId: offer.buyerId || "",
+      buyerName: offer.buyerName || "Verified Buyer",
+      buyerType: offer.buyerType || "Processor",
+      buyerVerified: offer.buyerVerified !== false,
+      offeredPrice: Number(offer.offeredPrice) || 2600,
+      quantity: Number(offer.quantity) || 100,
+      unit: offer.unit || "Quintal",
+      deliveryTerms: (offer.deliveryTerms as any) || "Buyer Pickup",
+      paymentTerms: offer.paymentTerms || "Direct Bank Transfer within 24 hours",
+      validityDate: offer.validityDate || new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
+      estimatedLogisticsCost: Number(offer.estimatedLogisticsCost) || 0,
+      netRealizationPerUnit: Number(offer.netRealizationPerUnit) || Number(offer.offeredPrice) || 2600,
+      notes: offer.notes || "",
+      status: (offer.status as any) || "Pending",
+      counterPrice: offer.counterPrice,
+      createdAt: new Date(),
+    };
+    await db.collection("agri_offers").insertOne(record as any);
+
+    // Update lot status to Offers Received if it's currently Available
+    await db.collection("agri_produce_lots").updateOne(
+      { id: record.lotId, status: "Available" },
+      { $set: { status: "Offers Received" } }
+    );
+
+    return record;
+  }
+
+  async updateOfferStatus(id: string, status: string, counterPrice?: number): Promise<AgriOffer | null> {
+    const db = await getDb();
+    const update: any = { status };
+    if (counterPrice !== undefined) {
+      update.counterPrice = counterPrice;
+    }
+    const result = await db.collection<AgriOffer>("agri_offers").findOneAndUpdate(
+      { id },
+      { $set: update },
+      { returnDocument: "after" }
+    );
+    return (result as any) || null;
+  }
+
+  // Transactions
+  async getAgriTransactions(userId?: string, role?: string): Promise<AgriTransaction[]> {
+    const db = await getDb();
+    const query: any = {};
+    if (userId) {
+      if (role === "buyer") {
+        query.buyerId = userId;
+      } else if (role === "farmer" || role === "fpo") {
+        query.sellerId = userId;
+      } else {
+        query.$or = [{ sellerId: userId }, { buyerId: userId }];
+      }
+    }
+    return db.collection<AgriTransaction>("agri_transactions").find(query).sort({ createdAt: -1 }).toArray();
+  }
+
+  async getAgriTransactionById(id: string): Promise<AgriTransaction | null> {
+    const db = await getDb();
+    return db.collection<AgriTransaction>("agri_transactions").findOne({
+      $or: [{ id }, { transactionCode: id }],
+    });
+  }
+
+  async createAgriTransaction(txn: Partial<AgriTransaction>): Promise<AgriTransaction> {
+    const db = await getDb();
+    const randCode = Math.floor(1000 + Math.random() * 9000);
+    const code = txn.transactionCode || `TXN-AGL-${randCode}`;
+
+    const gross = (Number(txn.quantity) || 1) * (Number(txn.agreedPricePerUnit) || 0);
+    const logCost = Number(txn.logisticsCost) || 0;
+    const storCost = Number(txn.storageCost) || 0;
+    const net = gross - logCost - storCost;
+
+    const record: AgriTransaction = {
+      id: txn.id || `txn-${randomUUID().slice(0, 8)}`,
+      transactionCode: code,
+      lotId: txn.lotId || "",
+      lotNumber: txn.lotNumber || "",
+      crop: txn.crop || "Tomato",
+      quantity: Number(txn.quantity) || 100,
+      unit: txn.unit || "Quintal",
+      agreedPricePerUnit: Number(txn.agreedPricePerUnit) || 2700,
+      grossAmount: gross,
+      logisticsCost: logCost,
+      storageCost: storCost,
+      netRealizationAmount: net,
+      sellerId: txn.sellerId || "",
+      sellerName: txn.sellerName || "Farmer",
+      sellerRole: txn.sellerRole || "farmer",
+      buyerId: txn.buyerId || "",
+      buyerName: txn.buyerName || "Verified Buyer",
+      buyerType: txn.buyerType || "Processor",
+      status: (txn.status as any) || "Transaction Confirmed",
+      stageTimestamps: {
+        "Lot Created": new Date(Date.now() - 86400000).toISOString(),
+        "Offer Accepted": new Date(Date.now() - 3600000 * 2).toISOString(),
+        "Transaction Confirmed": new Date().toISOString(),
+        ...(txn.stageTimestamps || {}),
+      },
+      logisticsDetails: txn.logisticsDetails || {
+        transporterName: "Kisan Express Logistics",
+        transporterPhone: "+91 98230 11234",
+        vehicleNumber: "MH-15-AG-4412",
+        estimatedDelivery: "24-48 Hours",
+      },
+      paymentStatus: (txn.paymentStatus as any) || "Pending",
+      paymentReference: txn.paymentReference,
+      paymentMethod: txn.paymentMethod || "Direct Bank Transfer / Escrow",
+      paymentProofUrl: txn.paymentProofUrl,
+      paymentDate: txn.paymentDate,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await db.collection("agri_transactions").insertOne(record as any);
+
+    // Update lot status to Offer Accepted / In Progress
+    if (record.lotId) {
+      await db.collection("agri_produce_lots").updateOne(
+        { id: record.lotId },
+        { $set: { status: "Offer Accepted" } }
+      );
+    }
+
+    return record;
+  }
+
+  async updateAgriTransaction(id: string, updates: Partial<AgriTransaction>): Promise<AgriTransaction | null> {
+    const db = await getDb();
+    const updateDoc: any = { ...updates, updatedAt: new Date() };
+
+    // If status updated, append timestamp to stageTimestamps
+    if (updates.status) {
+      updateDoc[`stageTimestamps.${updates.status}`] = new Date().toISOString();
+    }
+
+    const result = await db.collection<AgriTransaction>("agri_transactions").findOneAndUpdate(
+      { $or: [{ id }, { transactionCode: id }] },
+      { $set: updateDoc },
+      { returnDocument: "after" }
+    );
+    return (result as any) || null;
+  }
+
+  // Logistics & Storage
+  async getLogisticsOptions(): Promise<LogisticsOption[]> {
+    const db = await getDb();
+    const options = await db.collection<LogisticsOption>("agri_logistics").find().toArray();
+    return options.length > 0 ? options : INITIAL_LOGISTICS_OPTIONS;
+  }
+
+  async getStorageFacilities(): Promise<StorageFacility[]> {
+    const db = await getDb();
+    const facilities = await db.collection<StorageFacility>("agri_storage").find().toArray();
+    return facilities.length > 0 ? facilities : INITIAL_STORAGE_FACILITIES;
+  }
+
+  // Disputes
+  async getDisputes(userId?: string, isAdmin?: boolean): Promise<Dispute[]> {
+    const db = await getDb();
+    const query: any = {};
+    if (!isAdmin && userId) {
+      query.$or = [{ raisedByUserId: userId }, { respondentId: userId }];
+    }
+    return db.collection<Dispute>("agri_disputes").find(query).sort({ createdAt: -1 }).toArray();
+  }
+
+  async createDispute(dispute: Partial<Dispute>): Promise<Dispute> {
+    const db = await getDb();
+    const code = `DISP-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const record: Dispute = {
+      id: dispute.id || `disp-${randomUUID().slice(0, 8)}`,
+      disputeCode: code,
+      transactionId: dispute.transactionId || "",
+      transactionCode: dispute.transactionCode || "",
+      raisedByUserId: dispute.raisedByUserId || "",
+      raisedByName: dispute.raisedByName || "User",
+      raisedByRole: dispute.raisedByRole || "farmer",
+      respondentId: dispute.respondentId || "",
+      respondentName: dispute.respondentName || "Buyer",
+      category: (dispute.category as any) || "Payment",
+      description: dispute.description || "",
+      evidenceUrls: dispute.evidenceUrls || [],
+      status: "Open",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await db.collection("agri_disputes").insertOne(record as any);
+
+    // Update transaction payment status to Disputed if category is Payment
+    if (record.transactionId) {
+      await db.collection("agri_transactions").updateOne(
+        { $or: [{ id: record.transactionId }, { transactionCode: record.transactionCode }] },
+        { $set: { paymentStatus: "Disputed" } }
+      );
+    }
+
+    return record;
+  }
+
+  async updateDispute(id: string, updates: Partial<Dispute>): Promise<Dispute | null> {
+    const db = await getDb();
+    const result = await db.collection<Dispute>("agri_disputes").findOneAndUpdate(
+      { $or: [{ id }, { disputeCode: id }] },
+      { $set: { ...updates, updatedAt: new Date() } },
+      { returnDocument: "after" }
+    );
+    return (result as any) || null;
+  }
+
+  // FPO Member Management
+  async getFpoMembers(fpoId: string): Promise<FpoMember[]> {
+    const db = await getDb();
+    return db.collection<FpoMember>("agri_fpo_members").find({ fpoId }).toArray();
+  }
+
+  async createFpoMember(member: Partial<FpoMember>): Promise<FpoMember> {
+    const db = await getDb();
+    const record: FpoMember = {
+      id: member.id || `fpm-${randomUUID().slice(0, 8)}`,
+      fpoId: member.fpoId || "",
+      name: member.name || "Member Farmer",
+      phone: member.phone || "+91 98000 00000",
+      village: member.village || "Nashik District",
+      landSizeAcres: Number(member.landSizeAcres) || 3.5,
+      primaryCrops: member.primaryCrops || ["Tomato"],
+      totalLotsPooled: 0,
+      totalQuantitySoldQtl: 0,
+      joinedDate: new Date().toISOString().split("T")[0],
+    };
+    await db.collection("agri_fpo_members").insertOne(record as any);
+    return record;
+  }
+}
+
+export const storage = new MongoStorage();
+
+// Test connection on startup and seed defaults
+(async () => {
+  try {
+    console.log("[MongoDB] Testing connection...");
+    await getDb();
+    console.log("[MongoDB] Connection test successful");
+    await storage.seedAgriLinkDefaults();
+  } catch (error) {
+    console.error("[MongoDB] Connection test failed:", error);
+  }
+})();
+

@@ -1,0 +1,212 @@
+import { formatDistanceToNow } from "date-fns";
+import { Clock, Eye, ShieldCheck } from "lucide-react";
+import { Link } from "wouter";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import EmptyState from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserProducts } from "@/hooks/useProducts";
+import CopyableText from "./ui/CopyableText";
+
+export function RecentProducts() {
+  const { user } = useAuth();
+  const { data: products, isLoading, error } = useUserProducts(user);
+
+  if (isLoading) {
+    return (
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-4">
+                <Skeleton className="w-16 h-16 rounded-lg" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-48 mb-2" />
+                  <Skeleton className="h-3 w-32 mb-2" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+ if (error) {
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <h3 className="text-lg font-semibold text-foreground">
+          Recent Products
+        </h3>
+      </CardHeader>
+
+      <CardContent className="py-10">
+        <EmptyState
+          title="Unable to Load Products"
+          description="We couldn't retrieve your recent products right now. Please refresh the page and try again."
+        />
+
+        <div className="flex justify-center mt-4">
+          <Button
+            onClick={() => window.location.reload()}
+            data-testid="button-retry-products"
+          >
+            Retry
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+const recentProducts: any[] = [];
+
+  return (
+    <Card className="lg:col-span-2 shadow-sm border border-border overflow-hidden">
+      <CardHeader className="px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-foreground">Recent Products</h3>
+          <Link href="/registered-products">
+            <Button
+              variant="link"
+              className="text-primary hover:text-primary/80 text-sm font-medium p-0"
+              data-testid="link-view-all-products"
+            >
+              View All
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-0">
+        {recentProducts.length === 0 ? (
+        <div className="p-10">
+  <div className="flex flex-col items-center gap-5">
+    <div className="text-6xl">
+      🌾
+    </div>
+
+    <EmptyState
+      title="No Products Registered Yet"
+      description="Start tracking your agricultural products by registering your first item. Once added, products will appear here."
+    />
+
+    <Link href="/product-registration">
+      <Button
+        className="bg-primary hover:bg-primary/90"
+        data-testid="button-register-first-product"
+      >
+        Register First Product
+      </Button>
+    </Link>
+  </div>
+</div>
+        ) : (
+          <div className="divide-y divide-border">
+            {recentProducts.map((product) => (
+              <div
+                key={product.id}
+                className="p-6 hover:bg-muted/30 transition-colors"
+                data-testid={`card-product-${product.id}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-lg bg-muted/30 flex items-center justify-center">
+                      <span className="text-2xl">🌱</span>
+                    </div>
+
+                    <div>
+                      <h4
+                        className="font-medium text-foreground"
+                        data-testid={`text-product-name-${product.id}`}
+                      >
+                        {product.name}
+                      </h4>
+                      <div
+                        className="text-sm text-muted-foreground"
+                        data-testid={`text-product-batch-${product.id}`}
+                      >
+                        <CopyableText text={`Batch #${product.batchId}`} />
+                      </div>
+                      <div className="mt-1">
+                        <CopyableText text={product.id} />
+                      </div>
+                      <div className="flex items-center gap-4 mt-1">
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs font-medium flex items-center gap-1 ${
+                            product.blockchainHash
+                              ? "bg-verified/10 text-verified border-verified/20"
+                              : "bg-warning/10 text-warning border-warning/20"
+                          }`}
+                          data-testid={`badge-verification-${product.id}`}
+                        >
+                          {product.blockchainHash ? (
+                            <>
+                              <ShieldCheck className="w-3 h-3" />
+                              Verified
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="w-3 h-3" />
+                              Pending
+                            </>
+                          )}
+                        </Badge>
+                        <span
+                          className="text-xs text-muted-foreground"
+                          data-testid={`text-product-location-${product.id}`}
+                        >
+                          {product.location}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div
+                      className="text-sm font-medium text-foreground"
+                      data-testid={`text-product-date-${product.id}`}
+                    >
+                      {product.createdAt
+                        ? formatDistanceToNow(new Date(product.createdAt), {
+                            addSuffix: true,
+                          })
+                        : "Unknown date"}
+                    </div>
+                    <div
+                      className="text-xs text-muted-foreground"
+                      data-testid={`text-product-status-${product.id}`}
+                    >
+                      {product.status}
+                    </div>
+                    <Link href={`/product/${product.id}?from=dashboard`}>
+                      <Button
+                        variant="link"
+                        className="mt-2 text-accent hover:text-accent/80 text-xs font-medium flex items-center gap-1 p-0"
+                        data-testid={`button-view-product-${product.id}`}
+                      >
+                        <Eye className="w-3 h-3" />
+                        View Details
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
