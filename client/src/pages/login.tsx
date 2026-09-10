@@ -125,26 +125,23 @@ export default function LoginPage() {
             <div className="flex rounded-lg bg-muted p-1 border">
               <button
                 type="button"
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                  !isSignUp
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${!isSignUp
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
                 onClick={() => setIsSignUp(false)}
               >
                 Sign In
               </button>
               <button
                 type="button"
-                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-                  isSignUp
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${isSignUp
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
                 onClick={() => setIsSignUp(true)}
               >
-                Register (Explicit Input)
-              </button>
+                Register         </button>
             </div>
           </CardHeader>
 

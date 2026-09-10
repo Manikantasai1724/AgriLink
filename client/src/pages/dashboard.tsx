@@ -127,51 +127,71 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section 1: KPI Analytics Overview */}
+        {/* Section 1: KPI Analytics Overview (Clickable & Responsive) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4 shadow-sm border-l-4 border-l-emerald-600">
-            <span className="text-xs text-muted-foreground font-medium block">Best Paddy/Rice Modal Price</span>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                ₹{bestMandi ? bestMandi.modalPrice : 2750}/qtl
+          <Link href="/market-intelligence" className="block focus:outline-none">
+            <Card className="p-4 shadow-sm border-l-4 border-l-emerald-600 hover:shadow-md hover:border-emerald-500 transition-all hover:-translate-y-0.5 cursor-pointer group h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium block">Best Paddy/Rice Modal Price</span>
+                <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  ₹{bestMandi ? bestMandi.modalPrice : 2750}/qtl
+                </span>
+                <TrendingUp className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[11px] text-muted-foreground">
+                {bestMandi ? bestMandi.marketName : "Bhimavaram Market Yard"} (₹{bestMandi?.netRealization || 2705}/qtl net)
               </span>
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-            <span className="text-[11px] text-muted-foreground">
-              {bestMandi ? bestMandi.marketName : "Bhimavaram Market Yard"} (₹{bestMandi?.netRealization || 2705}/qtl net)
-            </span>
-          </Card>
+            </Card>
+          </Link>
 
-          <Card className="p-4 shadow-sm border-l-4 border-l-primary">
-            <span className="text-xs text-muted-foreground font-medium block">Active Produce Lots</span>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-2xl font-black text-foreground">
-                {myLots.length > 0 ? myLots.length : 1} Lots
-              </span>
-              <Package className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-[11px] text-muted-foreground">Listed for verified buyer matching</span>
-          </Card>
+          <Link href="/offers-matches" className="block focus:outline-none">
+            <Card className="p-4 shadow-sm border-l-4 border-l-primary hover:shadow-md hover:border-primary transition-all hover:-translate-y-0.5 cursor-pointer group h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium block">Active Produce Lots</span>
+                <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-foreground">
+                  {myLots.length > 0 ? myLots.length : 1} Lots
+                </span>
+                <Package className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[11px] text-muted-foreground">Click to view matched buyer offers</span>
+            </Card>
+          </Link>
 
-          <Card className="p-4 shadow-sm border-l-4 border-l-blue-600">
-            <span className="text-xs text-muted-foreground font-medium block">Active Contracts</span>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-2xl font-black text-foreground">{activeTransactionsCount} Active</span>
-              <Truck className="w-5 h-5 text-blue-600" />
-            </div>
-            <span className="text-[11px] text-muted-foreground">Logistics & transit tracking</span>
-          </Card>
+          <Link href="/transactions" className="block focus:outline-none">
+            <Card className="p-4 shadow-sm border-l-4 border-l-blue-600 hover:shadow-md hover:border-blue-500 transition-all hover:-translate-y-0.5 cursor-pointer group h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium block">Active Contracts</span>
+                <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-foreground">{activeTransactionsCount} Active</span>
+                <Truck className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[11px] text-muted-foreground">Click to track logistics & transit</span>
+            </Card>
+          </Link>
 
-          <Card className="p-4 shadow-sm border-l-4 border-l-amber-500">
-            <span className="text-xs text-muted-foreground font-medium block">Pending Settlements</span>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-2xl font-black text-amber-600">
-                ₹{pendingPaymentsAmount.toLocaleString("en-IN")}
-              </span>
-              <CreditCard className="w-5 h-5 text-amber-500" />
-            </div>
-            <span className="text-[11px] text-muted-foreground">Escrow & direct bank deposits</span>
-          </Card>
+          <Link href="/payments" className="block focus:outline-none">
+            <Card className="p-4 shadow-sm border-l-4 border-l-amber-500 hover:shadow-md hover:border-amber-400 transition-all hover:-translate-y-0.5 cursor-pointer group h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground font-medium block">Pending Settlements</span>
+                <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-amber-600">
+                  ₹{pendingPaymentsAmount.toLocaleString("en-IN")}
+                </span>
+                <CreditCard className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[11px] text-muted-foreground">Click to view bank & escrow receipts</span>
+            </Card>
+          </Link>
         </div>
 
         {/* Section 2: AI Selling Opportunity & Market Snapshot */}
@@ -239,20 +259,22 @@ export default function Dashboard() {
               </div>
               <CardDescription className="text-xs">Bhimavaram & West Godavari District</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-xs">
+            <CardContent className="space-y-1 text-xs">
               {marketPrices.slice(0, 3).map((p) => (
-                <div key={p.id} className="flex justify-between items-center py-1.5 border-b last:border-0">
-                  <div>
-                    <span className="font-semibold text-foreground block">{p.marketName}</span>
-                    <span className="text-[11px] text-muted-foreground">{p.distanceKm} km away</span>
+                <Link key={p.id} href={`/market-intelligence?crop=${encodeURIComponent(p.crop)}`} className="block">
+                  <div className="flex justify-between items-center py-2 px-2 rounded-md hover:bg-muted/60 transition-colors cursor-pointer border-b last:border-0 group">
+                    <div>
+                      <span className="font-semibold text-foreground group-hover:text-primary transition-colors block">{p.marketName}</span>
+                      <span className="text-[11px] text-muted-foreground">{p.distanceKm} km away • {p.crop}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-foreground block">₹{p.modalPrice}/qtl</span>
+                      <span className="text-[11px] text-emerald-600 font-semibold">
+                        ₹{p.netRealization}/qtl Net
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-bold text-foreground block">₹{p.modalPrice}/qtl</span>
-                    <span className="text-[11px] text-emerald-600 font-semibold">
-                      ₹{p.netRealization}/qtl Net
-                    </span>
-                  </div>
-                </div>
+                </Link>
               ))}
             </CardContent>
           </Card>
@@ -277,7 +299,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {buyerDemands.slice(0, 3).map((demand) => (
-              <Card key={demand.id} className="flex flex-col justify-between shadow-sm hover:border-primary/40 transition-all">
+              <Card key={demand.id} className="flex flex-col justify-between shadow-sm hover:border-primary/40 hover:shadow-md transition-all">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div>
@@ -309,7 +331,7 @@ export default function Dashboard() {
                 </CardContent>
                 <CardFooter className="pt-0">
                   <Link href={`/create-lot?crop=${demand.crop}&buyerDemandId=${demand.id}`} className="w-full">
-                    <Button size="sm" variant="outline" className="w-full text-xs font-medium gap-1">
+                    <Button size="sm" variant="outline" className="w-full text-xs font-medium gap-1 hover:bg-primary hover:text-primary-foreground transition-all">
                       Fulfill Demand
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Button>
@@ -337,29 +359,29 @@ export default function Dashboard() {
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 pt-4 text-xs">
+            <CardContent className="space-y-1 pt-3 text-xs">
               {myLots.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
                   No active lots. Create a digital lot to start receiving buyer bids.
                 </div>
               ) : (
                 myLots.slice(0, 3).map((lot) => (
-                  <div key={lot.id} className="flex justify-between items-center py-2 border-b last:border-0">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-foreground">{lot.lotNumber}</span>
-                        <Badge variant="secondary" className="text-[10px]">{lot.status}</Badge>
+                  <Link key={lot.id} href={`/offers-matches?lotId=${lot.id}`} className="block">
+                    <div className="flex justify-between items-center py-2 px-2 rounded-md hover:bg-muted/60 transition-colors cursor-pointer border-b last:border-0 group">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-foreground group-hover:text-primary transition-colors">{lot.lotNumber}</span>
+                          <Badge variant="secondary" className="text-[10px]">{lot.status}</Badge>
+                        </div>
+                        <span className="text-muted-foreground mt-0.5 block">
+                          {lot.quantity} {lot.unit} {lot.crop} • Asking: ₹{lot.expectedPricePerUnit}/{lot.unit}
+                        </span>
                       </div>
-                      <span className="text-muted-foreground mt-0.5 block">
-                        {lot.quantity} {lot.unit} {lot.crop} • Asking: ₹{lot.expectedPricePerUnit}/{lot.unit}
-                      </span>
-                    </div>
-                    <Link href={`/offers-matches?lotId=${lot.id}`}>
-                      <Button size="sm" variant="outline" className="text-xs h-8">
+                      <Button size="sm" variant="outline" className="text-xs h-8 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
                         View Matches
                       </Button>
-                    </Link>
-                  </div>
+                    </div>
+                  </Link>
                 ))
               )}
             </CardContent>
@@ -378,36 +400,36 @@ export default function Dashboard() {
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 pt-4 text-xs">
+            <CardContent className="space-y-1 pt-3 text-xs">
               {transactions.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
                   No trade contracts yet. Accept an offer to initialize transactions.
                 </div>
               ) : (
                 transactions.slice(0, 3).map((txn) => (
-                  <div key={txn.id} className="flex justify-between items-center py-2 border-b last:border-0">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-foreground">{txn.transactionCode}</span>
-                        <Badge
-                          className={`text-[10px] ${
-                            txn.paymentStatus === "Paid" ? "bg-emerald-600 text-white" : ""
-                          }`}
-                          variant={txn.paymentStatus === "Paid" ? "default" : "outline"}
-                        >
-                          {txn.paymentStatus}
-                        </Badge>
+                  <Link key={txn.id} href={`/transactions?id=${txn.id}`} className="block">
+                    <div className="flex justify-between items-center py-2 px-2 rounded-md hover:bg-muted/60 transition-colors cursor-pointer border-b last:border-0 group">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-foreground group-hover:text-primary transition-colors">{txn.transactionCode}</span>
+                          <Badge
+                            className={`text-[10px] ${
+                              txn.paymentStatus === "Paid" ? "bg-emerald-600 text-white" : ""
+                            }`}
+                            variant={txn.paymentStatus === "Paid" ? "default" : "outline"}
+                          >
+                            {txn.paymentStatus}
+                          </Badge>
+                        </div>
+                        <span className="text-muted-foreground mt-0.5 block">
+                          Buyer: {txn.buyerName} • ₹{txn.grossAmount.toLocaleString()}
+                        </span>
                       </div>
-                      <span className="text-muted-foreground mt-0.5 block">
-                        Buyer: {txn.buyerName} • ₹{txn.grossAmount.toLocaleString()}
-                      </span>
-                    </div>
-                    <Link href={`/transactions?id=${txn.id}`}>
-                      <Button size="sm" variant="outline" className="text-xs h-8">
+                      <Button size="sm" variant="outline" className="text-xs h-8 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
                         Track Contract
                       </Button>
-                    </Link>
-                  </div>
+                    </div>
+                  </Link>
                 ))
               )}
             </CardContent>

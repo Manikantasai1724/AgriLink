@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NavigationHeader } from "@/components/NavigationHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,35 +28,56 @@ export default function MarketIntelligencePage() {
   const [trendData, setTrendData] = useState<CropHistoricalTrend | null>(null);
   const [bestMarket, setBestMarket] = useState<MarketPrice | null>(null);
   const [recommendationReason, setRecommendationReason] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
+  
+  // Cache to ensure instant button response when switching between commodities
+  const cacheRef = useRef<Record<string, { prices: MarketPrice[]; trends: CropHistoricalTrend; best: any }>>({});
 
   useEffect(() => {
     fetchMarketData(selectedCrop);
   }, [selectedCrop]);
 
   const fetchMarketData = async (crop: string) => {
-    setLoading(true);
+    // If we have cached data for this crop, render it immediately without waiting
+    if (cacheRef.current[crop]) {
+      const cached = cacheRef.current[crop];
+      setMarketPrices(cached.prices);
+      setTrendData(cached.trends);
+      setBestMarket(cached.best?.bestMarket || null);
+      setRecommendationReason(cached.best?.recommendationReason || "");
+    } else if (marketPrices.length === 0) {
+      setLoading(true);
+    }
+
     try {
       const [pricesRes, trendsRes, compRes] = await Promise.all([
-        fetch(`/api/market-prices?crop=${crop}`),
-        fetch(`/api/market-prices/trends?crop=${crop}`),
-        fetch(`/api/market-prices/comparison?crop=${crop}`),
+        fetch(`/api/market-prices?crop=${encodeURIComponent(crop)}`),
+        fetch(`/api/market-prices/trends?crop=${encodeURIComponent(crop)}`),
+        fetch(`/api/market-prices/comparison?crop=${encodeURIComponent(crop)}`),
       ]);
 
+      let prices: MarketPrice[] = [];
+      let trends: CropHistoricalTrend | null = null;
+      let comp: any = null;
+
       if (pricesRes.ok) {
-        const prices = await pricesRes.json();
+        prices = await pricesRes.json();
         setMarketPrices(prices);
       }
 
       if (trendsRes.ok) {
-        const trends = await trendsRes.json();
+        trends = await trendsRes.json();
         setTrendData(trends);
       }
 
       if (compRes.ok) {
-        const comp = await compRes.json();
+        comp = await compRes.json();
         setBestMarket(comp.bestMarket);
         setRecommendationReason(comp.recommendationReason);
+      }
+
+      if (prices.length > 0 && trends) {
+        cacheRef.current[crop] = { prices, trends, best: comp };
       }
     } catch (err) {
       console.error("Failed to load market data", err);

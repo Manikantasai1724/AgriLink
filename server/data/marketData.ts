@@ -658,6 +658,36 @@ export const CROP_HISTORICAL_TRENDS: Record<string, CropHistoricalTrend> = {
       riskFactor: "Avoid holding stock without temperature control.",
     },
   },
+  Wheat: {
+    crop: "Wheat",
+    history7d: [
+      { date: "02 Sep", avgPrice: 2780, arrivalTons: 360 },
+      { date: "03 Sep", avgPrice: 2790, arrivalTons: 355 },
+      { date: "04 Sep", avgPrice: 2810, arrivalTons: 350 },
+      { date: "05 Sep", avgPrice: 2820, arrivalTons: 345 },
+      { date: "06 Sep", avgPrice: 2830, arrivalTons: 340 },
+      { date: "07 Sep", avgPrice: 2840, arrivalTons: 340 },
+      { date: "08 Sep", avgPrice: 2840, arrivalTons: 340 },
+    ],
+    history30d: [
+      { date: "10 Aug", avgPrice: 2700, arrivalTons: 390 },
+      { date: "17 Aug", avgPrice: 2740, arrivalTons: 380 },
+      { date: "24 Aug", avgPrice: 2780, arrivalTons: 360 },
+      { date: "31 Aug", avgPrice: 2820, arrivalTons: 350 },
+      { date: "08 Sep", avgPrice: 2840, arrivalTons: 340 },
+    ],
+    sellingWindowAdvice: {
+      recommendedWindow: "Steady Wholesale Distribution (Vijayawada Terminal)",
+      trendAssessment:
+        "Wheat prices at Vijayawada grain terminal are firm at ₹2,840/qtl with consistent flour mill and bakery off-take.",
+      confidence: "Medium",
+      keyDrivers: [
+        "Steady urban demand from regional flour and bakery processors",
+        "Direct warehouse delivery streamlines net realization",
+      ],
+      riskFactor: "Store in moisture-controlled sheds to preserve milling test weight.",
+    },
+  },
 };
 
 export const INITIAL_BUYER_DEMANDS: BuyerDemand[] = [
