@@ -5,583 +5,493 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active%20Production%20Ready-success?style=for-the-badge)
 ![Node Version](https://img.shields.io/badge/Node-v18%2B-green?style=for-the-badge)
+![React](https://img.shields.io/badge/React-18.3-blue?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=for-the-badge&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
+![Google Gemini](https://img.shields.io/badge/Google%20Gemini-AI%20Powered-orange?style=for-the-badge&logo=google)
+![MongoDB](https://img.shields.io/badge/MongoDB-6.19-47A248?style=for-the-badge&logo=mongodb)
 
-**AgriLink is a smart digital platform that helps farmers and FPOs make better selling decisions by providing localized market intelligence and connecting them directly with verified buyers.**
+**AgriLink is an advanced digital agricultural platform that empowers farmers and Farmer Producer Organizations (FPOs) with real-time APMC market intelligence, AI-driven selling window recommendations, deterministic direct buyer matching, and transparent end-to-end digital trade execution.**
 
 </div>
 
 ---
 
-## 📌 About AgriLink
+## 📌 Table of Contents
 
-**AgriLink** aggregates APMC mandi prices, buyer procurement demands, quality requirements, market arrivals, transportation, and storage options to provide farmers with real-time price comparisons, price trends, and recommended selling windows.
-
-Farmers and Farmer Producer Organizations (FPOs) can create digital produce lots with quantity, crop details, quality grade, and location, which are deterministically matched with suitable verified buyers (food processors, retail supermarket chains, institutional buyers, and traders).
-
-### The Primary Workflow
-$$\text{Market Intelligence} \longrightarrow \text{Decide When/Where to Sell} \longrightarrow \text{Find Verified Buyers} \longrightarrow \text{Create Produce Lot} \longrightarrow \text{Quality Grading} \longrightarrow \text{Receive Offers} \longrightarrow \text{Select Buyer} \longrightarrow \text{Arrange Logistics/Storage} \longrightarrow \text{Track Payment} \longrightarrow \text{Complete Transaction} \longrightarrow \text{Handle Disputes}$$
-
----
-
-## ✨ Core Modules & Capabilities
-
-- 📊 **Localized Market Intelligence** — Real-time APMC mandi prices, arrival volumes, and freight-deducted net realization comparisons across nearby assembly markets.
-- 🤖 **AI Selling Window Recommendations** — Data-backed harvest advisories based on 7-day arrival momentum, modal pricing patterns, and wholesale demand.
-- 🏢 **Direct Verified Buyer Procurement** — B2B purchase orders published by food processors, retail chains, and institutional aggregators with verified GSTIN/FSSAI credentials.
-- 📦 **Digital Produce Lots & Quality Grading** — Standardized digital lots with crop variety, visual inspection parameters, and AI-assisted quality assessment.
-- 🎯 **Deterministic Multi-Factor Matching** — Explainable match scoring (0-100%) factoring crop compatibility, volume range, quality compliance, proximity, and net realization.
-- 💬 **Digital Offers & Negotiation** — Transparent buyer bids, counter-offer mechanisms, and instant contract conversion.
-- 🚚 **Logistics & Storage Coordination** — Agricultural freight calculator, verified hauler directory, and nearby cold-chain storage reservation.
-- 💳 **Escrow & Payment Tracking** — Direct bank settlement tracking with verified UTR references and payment proof documentation.
-- ⚖️ **Dispute & Grievance Management** — Structured audit trail for payment, quality, quantity, and delivery claims.
-- 👥 **FPO Aggregation Hub** — Member farmer management and produce pooling to create commercial bulk lots commanding premium institutional contracts.
+- [Overview](#-overview)
+- [End-to-End Trade Lifecycle](#-end-to-end-trade-lifecycle)
+- [Core Features & Modules](#-core-features--modules)
+- [System Architecture](#-system-architecture)
+- [Technology Stack](#-technology-stack)
+- [Directory Structure](#-directory-structure)
+- [Installation & Setup](#-installation--setup)
+- [Environment Variables Configuration](#-environment-variables-configuration)
+- [API Reference](#-api-reference)
+- [Multi-Role Workflows](#-multi-role-workflows)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## 🛠 Tech Stack
+## 📖 Overview
+
+Smallholder farmers and agricultural aggregators frequently face market opacity, extreme price volatility at local APMC mandis, high middleman margins, and lack of verified institutional buyers. 
+
+**AgriLink** solves these systemic challenges by creating an integrated, transparent ecosystem:
+- **Aggregates real-time APMC mandi prices**, arrival volumes, and historical price movements across agricultural commodities.
+- **Calculates net farm-gate realizations** by deducting dynamic logistics and freight costs from regional mandi prices.
+- **Provides AI-powered selling advisories** with price momentum analysis and confidence scores to optimize harvest timing.
+- **Connects sellers directly with verified institutional buyers** (food processors, supermarket chains, exporters, and bulk traders).
+- **Employs explainable deterministic matching algorithms** to pair produce lots with buyer purchase orders.
+- **Streamlines digital offers, negotiations, and legally structured digital trade contracts**.
+- **Coordinates freight hauling and cold-chain/warehouse storage reservations**.
+- **Tracks payment escrow milestones and verified bank settlements** (UTR receipts).
+- **Supports FPO aggregation** for pooling smallholder produce into high-value commercial bulk lots.
+- **Enables QR-code-based farm-to-fork traceability** and supply chain ownership tracking.
+
+---
+
+## 🔄 End-to-End Trade Lifecycle
+
+```mermaid
+flowchart LR
+    A[📊 Market Intelligence<br/>& Price Discovery] --> B[🤖 AI Selling Window<br/>Recommendations]
+    B --> C[📦 Create Digital<br/>Produce Lot]
+    C --> D[🎯 Deterministic<br/>Buyer Matching]
+    D --> E[💬 Digital Offers<br/>& Negotiation]
+    E --> F[🚚 Logistics & Cold<br/>Storage Booking]
+    F --> G[💳 Milestone & Escrow<br/>Payment Tracking]
+    G --> H[✅ Trade Settlement<br/>& Dispute Resolution]
+```
+
+1. **Market Intelligence & Price Discovery**: View real-time APMC mandi modal prices, arrival volumes, and freight-deducted net realization across nearby markets.
+2. **AI Selling Window Recommendation**: Evaluate 7-day and 30-day price momentum, wholesale demand, and risk factors to decide whether to sell immediately or hold.
+3. **Digital Produce Lot Creation**: Specify crop variety, quantity (quintals), quality grade, harvest date, location, target price, and AI-assisted quality assessment.
+4. **Deterministic Buyer Matching**: Pair produce lots with active B2B purchase orders using multi-factor scoring (crop fit, volume, quality specs, proximity, net realization).
+5. **Digital Offers & Negotiation**: Receive instant offers from verified buyers, negotiate counter-prices, and execute agreed transactions.
+6. **Logistics & Storage Coordination**: Calculate freight transport fares, book verified logistics haulers, or reserve nearby cold storage.
+7. **Escrow & Payment Tracking**: Follow full lifecycle statuses (Lot Created → Offer Accepted → Transaction Confirmed → Logistics Arranged → In Transit → Delivered → Payment Received → Completed) with UTR verification.
+8. **Dispute Arbitration**: Transparent grievance filing and administrative mediation for payment, quality, delivery, or logistics discrepancies.
+
+---
+
+## ✨ Core Features & Modules
+
+### 1. 📊 Localized Market Intelligence
+- Real-time data aggregation across major agricultural commodities (Wheat, Rice, Cotton, Soybean, Tomato, Potato, Onion, Maize, Mustard, Chana, Turmeric, Ginger, etc.).
+- Modal, minimum, and maximum price tracking per quintal across regional APMC mandis.
+- Distance-based freight deductions calculating net farm-gate profit margins.
+- 5-day and 30-day historical price and arrival volume charts powered by Recharts.
+
+### 2. 🤖 AI Selling Window Recommendations
+- Predictive market advisories powered by Google Gemini AI and market momentum models.
+- Actionable selling advice (e.g., *"Hold for 3–5 days"*, *"Sell immediately"*, *"Stagger harvest"*).
+- Key drivers breakdown (e.g., declining arrivals, festive retail demand, warehouse availability) with risk factors and confidence ratings (High / Medium / Moderate).
+
+### 3. 🏢 Direct Verified Buyer Procurement
+- Open procurement portal for verified B2B buyers (Processors, Retailers, Institutional Aggregators, Exporters, and Traders).
+- Buyer credentials verification with GSTIN and FSSAI documentation badges.
+- Transparent purchase requirements: minimum grade, batch size, target price, delivery terms, and payment criteria.
+
+### 4. 📦 Digital Produce Lots & AI Quality Assessment
+- Standardized digital lot registration for farmers and FPOs.
+- Detailed visual grading parameters: moisture percentage, size category, color uniformity, and defect tolerance.
+- AI-assisted image analysis evaluating produce quality score (1–10) and defect detection.
+
+### 5. 🎯 Deterministic Multi-Factor Matching Engine
+- Transparent, explainable match algorithm (0–100% score) evaluated across 5 weighted dimensions:
+  - **Crop & Variety Compatibility** (30%)
+  - **Volume & Quantity Alignment** (20%)
+  - **Quality Grade Compliance** (20%)
+  - **Geographic Proximity & Freight Feasibility** (15%)
+  - **Net Realization & Target Price Viability** (15%)
+- Provides human-readable match rationale and automated top recommendations.
+
+### 6. 💬 Digital Offers & Contract Negotiation
+- Formal digital purchase bids issued directly to produce lots.
+- Counter-offer mechanisms allowing sellers and buyers to adjust pricing and delivery terms in real-time.
+- One-click offer acceptance converting deals into active digital trade contracts.
+
+### 7. 🚚 Integrated Logistics & Cold Storage Directory
+- Agricultural transport freight calculator with vehicle capacity estimation (Mini Trucks, 5-Ton Eicher, 10-Ton Trucks, Reefer/Cold Trucks).
+- Directory of verified transport operators with per-km rates, base fares, and pickup turnaround times.
+- Searchable directory of nearby storage facilities (Warehouses, Cold Storage, Collection Centers) with live capacity and monthly storage rates.
+
+### 8. 💳 Milestone Payment & Escrow Settlement Tracking
+- 9-stage transaction pipeline from initial agreement to final settlement.
+- Proof of payment upload (PNG, JPEG, WebP, PDF) with direct storage support.
+- Bank transfer reference (UTR) tracking ensuring transparent payment validation before lot release.
+
+### 9. 👥 FPO Produce Aggregation Hub
+- Dedicated interface for Farmer Producer Organizations (FPOs).
+- Member farmer roster management with land size, primary crops, and historical contributions.
+- Produce pooling module to assemble smallholder harvests into commercial bulk lots commanding institutional premiums.
+
+### 10. ⚖️ Dispute & Grievance Arbitration
+- Structured grievance filing covering Payment, Quality, Quantity, Delivery, and Logistics issues.
+- Evidence attachment upload (inspection reports, weighbridge slips, damage photographs).
+- Multi-party resolution workflow with administrator mediation and audit logs.
+
+### 11. 🔍 QR Code Authenticity & Supply Chain Traceability
+- Dynamic QR code generation for every produce lot and product batch.
+- Mobile-optimized QR scanner for instant batch verification in field or mandi.
+- Immutable ownership transfer history and chain-of-custody tracking from farm to retail.
+
+### 12. 🌐 Multilingual Accessibility
+- AI-driven regional language translation powered by Google Gemini AI.
+- Instant switching between English, Hindi, Telugu, Tamil, Kannada, Marathi, Punjabi, Gujarati, and Bengali.
+
+---
+
+## 🏗 System Architecture
+
+```mermaid
+graph TD
+    subgraph Client ["Frontend Layer (React 18 + Vite + TypeScript)"]
+        UI[shadcn/ui + Tailwind CSS + Lucide Icons]
+        Router[Wouter / React Router Navigation]
+        State[TanStack Query v5 + Context API]
+        Lang[AI Multilingual Provider]
+    end
+
+    subgraph API ["Backend API Gateway (Express.js + TypeScript)"]
+        AuthMid[Auth & JWT Middleware]
+        RateLimit[Helmet & Rate Limiter]
+        UploadMid[Multer File Upload Middleware]
+        APIRoutes[REST Endpoints /api/*]
+    end
+
+    subgraph Logic ["Business Logic & Services"]
+        MatchEngine[Deterministic Multi-Factor Matching]
+        AIService[Gemini AI Market Advisory & Vision Quality]
+        EmailService[Nodemailer Notification Engine]
+        StorageService[Storage Abstraction Layer]
+    end
+
+    subgraph Data ["Data & External Services"]
+        MongoDB[(MongoDB Database)]
+        Firebase[(Firebase Auth & Cloud Storage)]
+        GoogleAI[Google Gemini Generative AI]
+        SMTP[SMTP Email Server]
+    end
+
+    Client --> API
+    APIRoutes --> Logic
+    Logic --> MongoDB
+    Logic --> Firebase
+    Logic --> GoogleAI
+    Logic --> SMTP
+```
+
+---
+
+## 🛠 Technology Stack
 
 ### Frontend
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| **React** | 18.3+ | UI library with hooks |
-| **TypeScript** | 5.6+ | Type-safe development |
-| **Vite** | 6.1+ | Lightning-fast build tool |
-| **Tailwind CSS** | 3.4+ | Utility-first styling |
-| **shadcn/ui** | Latest | Accessible React components |
-| **React Router** | 7.9+ | Client-side routing |
-| **TanStack Query** | 5.60+ | Server state management |
-| **React Hook Form** | 7.55+ | Form handling & validation |
-| **Zod** | 3.24+ | TypeScript-first validation |
-| **Firebase SDK** | 12.2+ | Authentication & services |
+| Component | Technology | Version | Description |
+|---|---|---|---|
+| **Framework** | React | `^18.3.1` | Modern declarative component architecture |
+| **Language** | TypeScript | `^5.6.3` | Strong typing across client models and interfaces |
+| **Bundler & Dev Server** | Vite | `^6.1.0` | Ultra-fast HMR and optimized production bundling |
+| **Styling** | Tailwind CSS | `^3.4.17` | Utility-first CSS styling system |
+| **Component Library** | shadcn/ui + Radix UI | Latest | Accessible, headless UI primitives |
+| **Data Fetching** | TanStack Query | `^5.60.5` | Asynchronous state management and caching |
+| **Routing** | Wouter / React Router | `^7.9.1` | Lightweight, robust client-side routing |
+| **Form Handling** | React Hook Form + Zod | `^7.55.0` | Performant form state and schema validation |
+| **Charts & Visuals** | Recharts | `^2.15.2` | Interactive market price and arrival charts |
+| **Animations** | Framer Motion | `^11.13.1` | Fluid UI transitions and micro-interactions |
+| **QR Code Engine** | qrcode.react / @zxing | `^4.2.0` | Dynamic QR generation and camera-based scanning |
 
-### Backend & Infrastructure
-| Technology | Version | Purpose |
-|-----------|---------|---------|
-| **Node.js** | 18+ | JavaScript runtime |
-| **Express.js** | 4.21+ | Web server framework |
-| **TypeScript** | 5.6+ | Type-safe backend code |
-| **MongoDB** | 6.19+ | NoSQL database |
-| **Firebase** | 12.2+ | Auth, database, storage |
-| **Render** | - | Cloud deployment platform |
-
-### AI & Services
-- **Google Gemini AI** — Language translation
-- **Firebase Authentication** — Secure user management
-- **Firestore** — Real-time database
+### Backend & Storage
+| Component | Technology | Version | Description |
+|---|---|---|---|
+| **Server Framework** | Express.js | `^4.21.2` | RESTful API server with TypeScript support |
+| **Runtime** | Node.js | `>=18.0.0` | JavaScript/TypeScript asynchronous runtime |
+| **Database** | MongoDB | `^6.19.0` | Document database for lots, demands, trades, users |
+| **Authentication** | Firebase Auth / JWT | `^12.2.1` | Multi-provider authentication and session management |
+| **Cloud Storage** | Firebase Storage / Local | `^12.2.1` | Payment proof receipts and lot image attachments |
+| **AI Engine** | Google Gemini Generative AI | `^0.24.1` | Market insights, translations, and quality analysis |
+| **Email Service** | Nodemailer | `^8.0.10` | Transactional email alerts and updates |
+| **Security** | Helmet, CORS, Rate Limit | Latest | API protection, secure headers, and abuse prevention |
 
 ---
 
-## 📁 Project Structure
-
-Below is the folder and file structure of the KrishiSetu project 👇
+## 📁 Directory Structure
 
 ```
-KrishiSetu/
+AgriLink/
+├── client/                               # React Frontend Application
+│   ├── public/                           # Static assets, icons, and manifests
+│   └── src/
+│       ├── components/                   # Reusable UI components
+│       │   ├── ui/                       # shadcn/ui base primitives (Button, Dialog, Card, etc.)
+│       │   ├── Footer.tsx                # Global footer component
+│       │   ├── LandingNavbar.tsx         # Responsive landing page navigation
+│       │   ├── NavigationHeader.tsx      # Main application authenticated navigation
+│       │   ├── PaymentProofModal.tsx     # Payment documentation upload modal
+│       │   ├── ProductRegistrationForm.tsx # Produce lot registration form
+│       │   ├── QRCodeGenerator.tsx       # Dynamic QR code renderer
+│       │   ├── QRCodeScanner.tsx         # Camera-based QR code reader
+│       │   ├── RoleDashboard.tsx         # Role-specific dashboard views
+│       │   ├── SupplyChainMap.tsx        # Supply chain node visualization
+│       │   └── UserSearch.tsx            # Directory search and filter component
+│       ├── hooks/                        # Custom React hooks (useAuth, useLanguage, useToast)
+│       ├── lib/                          # Client utilities, Firebase client, QueryClient
+│       ├── pages/                        # Application views & route handlers
+│       │   ├── LandingPage.tsx           # Public platform landing page
+│       │   ├── HowItWorks.tsx            # Interactive workflow explanation
+│       │   ├── about.tsx                 # About the platform and mission
+│       │   ├── contact.tsx               # Inquiries and support form
+│       │   ├── dashboard.tsx             # Primary operational dashboard
+│       │   ├── market-intelligence.tsx   # Live APMC mandis, price trends, AI selling windows
+│       │   ├── buyer-demand.tsx          # B2B buyer procurement demand catalog
+│       │   ├── verified-buyers.tsx       # Verified institutional buyer directory
+│       │   ├── create-lot.tsx            # Digital produce lot creation & grading
+│       │   ├── offers-matches.tsx        # Deterministic match scores & offer negotiation
+│       │   ├── transactions.tsx          # 9-stage trade contract execution & escrow tracking
+│       │   ├── logistics-storage.tsx     # Freight calculator & storage reservation
+│       │   ├── payments.tsx              # Payment reconciliation & UTR verification
+│       │   ├── disputes.tsx              # Grievance filing & dispute arbitration
+│       │   ├── fpo-aggregation.tsx       # FPO smallholder member aggregation hub
+│       │   ├── admin.tsx                 # Platform administration & verification portal
+│       │   ├── profile.tsx               # User profile, role settings, and preferences
+│       │   ├── login.tsx                 # Authentication (Email/Password & OAuth)
+│       │   ├── product-details.tsx       # Detailed produce lot view & provenance
+│       │   └── not-found.tsx             # 404 error page
+│       ├── App.tsx                       # Root component with routing and providers
+│       ├── index.css                     # Design tokens, variables, and global CSS
+│       └── main.tsx                      # Application client entry point
 │
-├── .github/
-│   └── ISSUE_TEMPLATE/                # GitHub issue templates for contributors
+├── server/                               # Express.js Backend Server
+│   ├── data/                             # Mock/initial market prices and historical trends
+│   │   └── marketData.ts
+│   ├── ai.ts                             # Google Gemini AI translation and quality grading
+│   ├── aiMatching.ts                     # Deterministic multi-factor match scoring engine
+│   ├── auth.ts                           # Password hashing, JWT signing, and auth middleware
+│   ├── email.ts                          # Nodemailer email notification service
+│   ├── firebaseJwt.ts                    # Firebase ID token verification
+│   ├── firebaseStorage.ts                # Firebase Cloud Storage upload handler
+│   ├── index.ts                          # Server startup, middleware configuration, port binding
+│   ├── routes.ts                         # Complete REST API route controllers
+│   ├── storage.ts                        # MongoDB database implementation & interface
+│   └── vite.ts                           # Vite development server middleware
 │
-├── client/                            # React Frontend Application
-│   ├── public/                        # Static assets
-│   │
-│   ├── src/
-│   │   ├── components/                # Reusable UI components
-│   │   │   ├── ui/                    # shadcn/ui base components
-│   │   │   ├── DistributorProductForm.tsx
-│   │   │   ├── ProductRegistrationForm.tsx
-│   │   │   ├── ProductSearch.tsx
-│   │   │   ├── QRCodeGenerator.tsx
-│   │   │   ├── QRCodeScanner.tsx
-│   │   │   ├── SupplyChainMap.tsx
-│   │   │   ├── RoleDashboard.tsx
-│   │   │   └── PaymentProofModal.tsx
-│   │
-│   ├── pages/                         # Full-page components (routes)
-│   │   ├── LandingPage.tsx
-│   │   ├── dashboard.tsx
-│   │   ├── product-registration.tsx
-│   │   ├── registered-products.tsx
-│   │   ├── qr-scanner.tsx
-│   │   ├── login.tsx
-│   │   ├── profile.tsx
-│   │   └── not-found.tsx
-│   │
-│   ├── hooks/                         # Custom React hooks
-│   │   ├── useAuth.ts                 # Authentication logic
-│   │   ├── useProducts.ts             # Product data management
-│   │   └── use-toast.ts               # Toast notifications
-│   │
-│   ├── lib/                           # Utilities & configuration
-│   │   ├── firebase.ts                # Firebase setup
-│   │   ├── queryClient.ts             # TanStack Query config
-│   │   └── utils.ts                   # Helper functions
-│   │
-│   ├── App.tsx                        # Root component
-│   ├── main.tsx                       # Entry point
-│   └── index.css                      # Global styles
+├── shared/                               # Shared Types & Schemas
+│   └── schema.ts                         # TypeScript interfaces & Zod validation schemas
 │
-├── server/                            # Express Backend Server
-│   ├── index.ts                       # Server entry point
-│   ├── routes.ts                      # API route definitions
-│   ├── storage.ts                     # Database operations
-│   └── vite.ts                        # Vite integration
-│
-├── shared/                            # Shared Code & Types
-│   └── schema.ts                      # TypeScript interfaces & Zod schemas
-│
-├── uploads/                           # File Storage
-│   └── payment-proofs/                # Payment documentation
-│
-├── .env.example                       # Example environment variables
-├── .gitignore                         # Git ignore configuration
-├── CODE_OF_CONDUCT.md                 # Community guidelines
-├── CONTRIBUTING.md                    # Contribution guidelines
-├── LICENSE.md                         # MIT License
-├── PULL_REQUEST_TEMPLATE.md           # PR format template
-├── README.md                          # This file 😄
-│
-├── package.json                       # Dependencies & scripts
-├── package-lock.json                  # Lock file
-├── tsconfig.json                      # TypeScript config
-├── vite.config.ts                     # Vite configuration
-├── tailwind.config.ts                 # Tailwind CSS config
-├── postcss.config.js                  # PostCSS setup
-└── eslint.config.js                   # ESLint configuration
+├── uploads/                              # Local storage fallback for payment proofs & media
+├── .env.example                          # Environment variable template
+├── .gitignore                            # Git ignore configuration
+├── package.json                          # Dependencies, scripts, and package metadata
+├── tsconfig.json                         # TypeScript compiler configuration
+├── vite.config.ts                        # Vite build configuration
+└── tailwind.config.ts                    # Tailwind CSS theme and typography configuration
 ```
 
 ---
 
 ## ⚙️ Installation & Setup
 
-### Clone the Repository
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm** (v9+) or **yarn** / **pnpm**
+- **MongoDB**: Local MongoDB instance or MongoDB Atlas connection URI
+- **Google Gemini API Key**: For AI recommendations and quality analysis ([Google AI Studio](https://aistudio.google.com/))
+- **Firebase Project** (Optional for OAuth / Cloud Storage): ([Firebase Console](https://console.firebase.google.com/))
 
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/aditiraj2006/KrishiSetu.git
-cd KrishiSetu
+git clone https://github.com/Manikantasai1724/AgriLink.git
+cd AgriLink
 ```
 
-### Install Dependencies
-
+### 2. Install Dependencies
 ```bash
 npm install
 ```
 
-### Configure Environment Variables
-
-1. Create a `.env` file in the root directory
-2. Copy values from `.env.example`
-3. Add your Firebase, MongoDB, Gemini, and Email credentials:
-
-```env
-# Firebase Configuration
-VITE_FIREBASE_API_KEY=your_api_key_here
-VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain_here
-VITE_FIREBASE_PROJECT_ID=your_project_id_here
-VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket_here
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id_here
-VITE_FIREBASE_APP_ID=your_app_id_here
-FIREBASE_PROJECT_ID=your_project_id_here
-
-# MongoDB Connection
-MONGODB_URI=your_mongodb_connection_string_here
-MONGO_DB_NAME=mongo_db_name
-
-# Gemini Api key
-GOOGLE_GEMINI_API_KEY=your_gemini_api_key_here
-
-# Nodemailer / SMTP Email Alerts Configuration
-EMAIL_SERVICE=gmail
-EMAIL_USER=your-email-address@gmail.com
-EMAIL_PASS=your-16-character-app-password
+### 3. Configure Environment Variables
+Create a `.env` file in the root directory by copying `.env.example`:
+```bash
+cp .env.example .env
 ```
 
-#### How to get Gmail SMTP Credentials:
-To get a valid `EMAIL_PASS` App Password for Google:
-1. Go to your **[Google Account Security Settings](https://myaccount.google.com/security)**.
-2. Under the *"How you sign in to Google"* section, ensure **2-Step Verification** is turned ON.
-3. Search for **"App passwords"** in the top settings search bar, or navigate directly to **[App Passwords](https://myaccount.google.com/apppasswords)**.
-4. Enter a name for the app (e.g., `"KrishiSetu Alert"`).
-5. Click **Create**. Copy the generated **16-character passcode** (shown in a yellow box) and paste it into the `EMAIL_PASS` field of your `.env` file without spaces.
+Edit `.env` and supply your connection strings and API keys (see [Environment Variables Configuration](#-environment-variables-configuration) below).
 
-> ⚠️ **IMPORTANT**: Never commit your `.env` file. It contains sensitive credentials!
-
-#### Detailed Environment Variables Reference
-
-Below is a detailed breakdown of all environment variables supported by KrishiSetu, including their purpose, whether they are required, how to obtain them, and the application behavior when they are missing.
-
-| Variable | Required | Description | Where to Get / Default Value | Behavior If Absent |
-| :--- | :---: | :--- | :--- | :--- |
-| **`VITE_FIREBASE_API_KEY`** | **Yes** | Firebase project Web API Key. Used by frontend SDK to access Auth and Storage APIs. | Firebase Console → Project Settings → Web App Config. | User registration and logins will fail with configuration errors. |
-| **`VITE_FIREBASE_AUTH_DOMAIN`** | **Yes** | Firebase Auth domain for login redirects. | Firebase Console → Project Settings → Web App Config. | User logins and authentication redirect flows will not initialize. |
-| **`VITE_FIREBASE_PROJECT_ID`** | **Yes** | Firebase Project ID. Used by both client and backend for token verification. | Firebase Console → Project Settings. | Server-side validation of authenticated sessions will fail. |
-| **`VITE_FIREBASE_STORAGE_BUCKET`** | **Yes** | Firebase Cloud Storage bucket URL for uploading files. | Firebase Console → Project Settings → Storage. | Product payment proofs fallback to local server directory `/uploads/payment-proofs/`. |
-| **`VITE_FIREBASE_MESSAGING_SENDER_ID`** | No | Firebase Messaging Sender ID for push notifications. | Firebase Console → Project Settings. | Push notification subscription features will fail or remain inactive. |
-| **`VITE_FIREBASE_APP_ID`** | **Yes** | Unique identifier for your Firebase Web App. | Firebase Console → Project Settings → Web App Config. | Client-side Firebase SDK fails to initialize. |
-| **`FIREBASE_PROJECT_ID`** | No | Backup/legacy Project ID configuration for production deployment environments. | Same as `VITE_FIREBASE_PROJECT_ID`. | Standard server builds or deployments (e.g. on Render) might lack metadata. |
-| **`MONGODB_URI`** | **Yes** | MongoDB connection string. Supports Atlas cluster connection or local instances. | MongoDB Atlas dashboard or local: `mongodb://localhost:27017/krishisetu` | The backend Express server will throw a connection error and crash immediately. |
-| **`MONGO_DB_NAME`** | No | Target MongoDB database name. | Choose any string. Defaults to `"krishisetu"`. | Application database defaults to the name `"krishisetu"`. |
-| **`GOOGLE_GEMINI_API_KEY`** | No | API Key for Google Gemini AI features (translation, quality analysis). | Google AI Studio (Makersuite) | AI translation/grammar check falls back to original text; AI quality analysis returns a neutral default score (5/10). |
-
-
-### Start Development Servers
-
+### 4. Start Development Server
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:5001](http://localhost:5001) in your browser!
+The application will start on **`http://localhost:5001`** with hot module replacement (HMR) enabled for the frontend and automatic reload for the backend.
+
+### 5. Build for Production
+```bash
+npm run build
+npm start
+```
 
 ---
 
-### Firebase Setup (Required for OAuth Login)
+## 🔐 Environment Variables Configuration
 
-| Step | Action | Where |
-|------|--------|-------|
-| 1 | Firebase Console kholо | [console.firebase.google.com](https://console.firebase.google.com) |
-| 2 | Authentication → Settings → Authorized Domains | Firebase Console |
-| 3 | **Add Domain**: `your-app.onrender.com` | Authorized Domains list |
-| 4 | Save karo aur OAuth login test karo | Production URL par |
+| Variable | Required | Description | Default / Example |
+|---|:---:|---|---|
+| `PORT` | No | Port on which the Express server listens | `5001` |
+| `NODE_ENV` | No | Runtime environment (`development` or `production`) | `development` |
+| `MONGODB_URI` | **Yes** | MongoDB connection string (Atlas or Local) | `mongodb://localhost:27017/agrilink` |
+| `MONGO_DB_NAME` | No | Target MongoDB database name | `agrilink` |
+| `GOOGLE_GEMINI_API_KEY` | No | API Key for Gemini AI recommendations & translation | `AIzaSy...` |
+| `JWT_SECRET` | No | Secret key used for signing session tokens | `your-secret-key-min-32-chars` |
+| `VITE_FIREBASE_API_KEY` | No | Firebase Web API Key for client SDK | `AIzaSy...` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | No | Firebase Auth domain for login redirects | `your-app.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | No | Firebase Project ID | `your-project-id` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | No | Firebase Cloud Storage bucket for proofs/images | `your-app.appspot.com` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | No | Firebase Cloud Messaging sender identifier | `1234567890` |
+| `VITE_FIREBASE_APP_ID` | No | Firebase Web App Unique Identifier | `1:123456:web:abcd` |
+| `EMAIL_SERVICE` | No | SMTP Email provider service | `gmail` |
+| `EMAIL_USER` | No | SMTP sender email address | `alerts@example.com` |
+| `EMAIL_PASS` | No | SMTP application password | `xxxx-xxxx-xxxx-xxxx` |
 
-> 💡 `localhost` development mein automatically authorized hota hai, but production domain manually add karna padta hai.
-
-### Common Errors & Fixes
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `auth/unauthorized-domain` | Domain Firebase mein add nahi | Upar wala Step 3 follow karo |
-| OAuth popup band ho jaye | Same as above | Same fix |
-| Login locally kaam kare, production par na kare | Same as above | Same fix |
+> ⚠️ **Security Notice**: Never commit `.env` or production credentials to source control.
 
 ---
 
-## ▶️ Usage
+## 📡 API Reference
 
-1. **Sign Up / Log In** — Create your account using Firebase authentication
-2. **Select Your Role** — Choose farmer, distributor, retailer, or admin
-3. **Share Products** — Register agricultural products with details and media
-4. **Scan QR Codes** — Verify product authenticity using QR code scanner
-5. **Track Supply Chain** — Monitor product journey from farm to consumer
-6. **Translate Content** — Automatically translate product info to regional languages
-7. **Access Resources** — Browse verified NGO and support organization database
-8. **Manage Orders** — Streamline ordering and fulfillment with supply chain partners
+### 1. Market Intelligence & Advisories
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/market-prices` | Fetch live APMC mandi prices with freight-adjusted net realization |
+| `GET` | `/api/market-trends/:crop` | Get 7-day/30-day historical prices, arrival trends, and AI selling window advice |
+
+### 2. Buyer Demand & Procurement
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/buyer-demands` | List active B2B purchase orders from verified buyers |
+| `POST` | `/api/buyer-demands` | Create a new buyer procurement demand requirement |
+
+### 3. Produce Lots & AI Matching
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/produce-lots` | List registered produce lots (filterable by seller, crop, status) |
+| `POST` | `/api/produce-lots` | Register a new digital produce lot with quality parameters |
+| `GET` | `/api/produce-lots/:id` | Get comprehensive details of a specific produce lot |
+| `GET` | `/api/produce-lots/:id/matches` | Execute deterministic multi-factor matching for a produce lot |
+
+### 4. Offers & Contracts
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/agri-offers` | Get digital purchase offers (filterable by lotId or sellerId) |
+| `POST` | `/api/agri-offers` | Submit a formal purchase offer or counter-offer for a lot |
+| `PATCH` | `/api/agri-offers/:id/status` | Accept, reject, or counter an offer (converts to transaction on accept) |
+
+### 5. Transactions & Escrow Settlement
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/agri-transactions` | List user transactions across all lifecycle stages |
+| `GET` | `/api/agri-transactions/:id` | Retrieve detailed transaction contract and milestone timestamps |
+| `PATCH` | `/api/agri-transactions/:id/status` | Advance transaction lifecycle stage (Logistics Arranged, In Transit, etc.) |
+| `PATCH` | `/api/agri-transactions/:id/payment` | Submit payment verification details and UTR bank reference |
+
+### 6. Logistics & Storage
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/logistics-options` | List verified agricultural freight transporters and rate cards |
+| `GET` | `/api/storage-facilities` | List nearby cold storage and warehouse facilities with available capacity |
+
+### 7. Disputes & Grievances
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/disputes` | List all open and resolved dispute cases |
+| `POST` | `/api/disputes` | File a new trade dispute with evidence documentation |
+| `PATCH` | `/api/disputes/:id/resolve` | Administrative resolution and settlement determination |
+
+### 8. FPO Aggregation Hub
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/fpo-members` | Retrieve roster of affiliated smallholder farmers |
+| `POST` | `/api/fpo-members` | Register a new member farmer under the FPO |
+
+### 9. AI Services & Tools
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/ai/analyze-quality` | Analyze crop produce image and generate AI quality grading score |
+| `POST` | `/api/ai/translate` | Translate agricultural content into regional Indian languages |
+
+---
+
+## 👥 Multi-Role Workflows
+
+AgriLink supports role-specific interfaces tailored for each stakeholder:
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   🌱 Farmer     │     │    👥 FPO       │     │   🏢 Buyer      │
+│  - Mandi Prices │     │  - Pool Produce │     │  - Post Demands │
+│  - AI Advice    │     │  - Bulk Lots    │     │  - Make Offers  │
+│  - Create Lots  │     │  - Member Roster│     │  - Track Orders │
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 ▼
+                     ┌───────────────────────┐
+                     │ 🌾 AgriLink Platform  │
+                     │  - Multi-Factor Match │
+                     │  - Trade Contracts    │
+                     │  - Freight & Storage  │
+                     │  - Escrow Tracking    │
+                     │  - Dispute Resolution │
+                     └───────────────────────┘
+```
+
+- **Farmers**: Inspect localized mandi rates, receive AI harvest advisories, list lots, accept verified buyer offers, and monitor payments.
+- **FPOs (Farmer Producer Organizations)**: Aggregate produce from multiple smallholders to build commercial bulk batches, negotiate high-value contracts, and track member revenue splits.
+- **Buyers & Processors**: Post recurring commodity demands with quality criteria, browse matched produce lots, send digital bids, and track shipment milestones.
+- **Logistics & Storage Providers**: List freight vehicles, provide transport quotes, and manage cold storage bookings.
+- **Platform Administrators**: Verify buyer credentials (GSTIN/FSSAI), arbitrate disputes, monitor market price data feeds, and oversee platform integrity.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from everyone! Whether you're fixing bugs, adding features, or improving documentation, your help makes KrishiSetu better. 💖
+We welcome contributions from developers, agritech researchers, and open-source enthusiasts.
 
 ### Contribution Process
-
-1. **Fork the Repository** — Click the Fork button on GitHub
-2. **Clone Your Fork**
+1. **Fork the Repository** on GitHub.
+2. **Clone your fork**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/KrishiSetu.git
-   cd KrishiSetu
-   git remote add upstream https://github.com/aditiraj2006/KrishiSetu
+   git clone https://github.com/YOUR_USERNAME/AgriLink.git
+   cd AgriLink
    ```
-
-3. **Create a Feature Branch**
+3. **Create a feature branch**:
    ```bash
    git checkout -b feature/your-feature-name
    ```
-
-4. **Make Your Changes** — Write clean, well-documented code
-
-5. **Commit with Clear Messages**
+4. **Implement changes** following TypeScript and React best practices.
+5. **Verify code quality**:
    ```bash
-   git commit -m "[feat] Add new QR code feature"
-   git commit -m "[fix] Resolve product search bug"
-   git commit -m "[docs] Update setup instructions"
+   npm run check
    ```
-
-6. **Push to Your Fork**
+6. **Commit changes** using descriptive messages:
    ```bash
-   git push origin feature/your-feature-name
+   git commit -m "[feat] Implement dynamic freight rate calculator"
    ```
-
-7. **Create a Pull Request** — Include a detailed description and reference any related issues
-
-### Code Standards
-
-✅ **Do's**
-- Follow TypeScript best practices
-- Write meaningful variable names (avoid `x`, `temp`, etc.)
-- Add comments for complex logic blocks
-- Keep functions small and single-purpose
-- Test your changes thoroughly
-- Format code with Prettier
-- Update documentation when needed
-
-❌ **Don'ts**
-- Don't add multiple unrelated changes in one PR
-- Don't copy code without understanding it
-- Don't ignore code review feedback
-- Don't leave `console.log()` statements in production code
-- Don't make unnecessary style changes
-- Don't commit `.env` files
-
-### Branch Naming Convention
-
-```
-feature/add-new-feature        # New feature
-bugfix/fix-critical-bug        # Bug fix
-docs/update-readme             # Documentation
-refactor/optimize-queries      # Code refactoring
-test/add-unit-tests           # Tests
-```
-
-### Pull Request Checklist
-
-Before submitting your PR, ensure:
-
-- [ ] PR title follows format: `[type] description` (e.g., `[feat] Add QR scanner`)
-- [ ] Code follows our style guidelines
-- [ ] Self-review completed
-- [ ] Comments added for complex areas
-- [ ] No new console warnings introduced
-- [ ] Tests added/updated (if applicable)
-- [ ] Documentation updated
-- [ ] Related issues linked (use `Fixes #123`)
-- [ ] `.env` file is NOT included
-- [ ] Firebase Authorized Domains updated for production deployment (if auth changes made)
-
----
-
-## 🎯 Good First Issues & Labels
-
-### Understanding Issue Labels
-
-| Label | Color | Description | Best For |
-|-------|-------|-------------|----------|
-| 🟢 **good first issue** | `#90EE90` | Perfect for newcomers | First-time contributors |
-| 🆘 **help wanted** | `#FFD700` | Extra hands needed | Anyone wanting to help |
-| 🐛 **bug** | `#FF6B6B` | Something broken | Bug fixes |
-| ✨ **enhancement** | `#87CEEB` | New feature | Feature implementation |
-| 📚 **documentation** | `#DDA0DD` | Docs improvement | Writers |
-| 🔧 **refactor** | `#F0E68C` | Code cleanup | Optimization |
-| 🎨 **ui-ux** | `#FFA07A` | Design/UX | Frontend developers |
-| 🚀 **performance** | `#20B2AA` | Speed improvement | Performance optimization |
-
-### How to Find Issues
-
-1. Visit the [Issues Page](../../issues)
-2. Filter by `good first issue` label
-3. Read the description carefully
-4. Comment: "I'd like to work on this!"
-5. Wait for maintainer approval
-6. Start coding!
-
----
-
-## 📝 Contribution Workflow (Step-by-Step)
-
-### Step 1️⃣ Fork & Setup
-
-```bash
-# Fork on GitHub, then clone your fork
-git clone https://github.com/YOUR_USERNAME/KrishiSetu.git
-cd KrishiSetu
-
-# Add upstream remote to stay synchronized
-git remote add upstream https://github.com/aditiraj2006/KrishiSetu.git
-git remote -v  # Verify both remotes exist
-```
-
-### Step 2️⃣ Create Feature Branch
-
-```bash
-# Update from upstream
-git fetch upstream
-git checkout main
-git merge upstream/main
-
-# Create your feature branch
-git checkout -b feature/amazing-feature
-```
-
-### Step 3️⃣ Implement Changes
-
-```bash
-# Edit files, add features, fix bugs
-# Keep commits focused and atomic
-git add .
-git commit -m "[feat] Add amazing feature description"
-```
-
-### Step 4️⃣ Test Your Code
-
-```bash
-# Run both development servers
-npm run dev                    # Backend
-cd client && npm run dev       # Frontend (in another terminal)
-
-# Test thoroughly:
-# - Manual testing of your feature
-# - Check for console errors
-# - Test in different browsers
-# - Verify responsive design
-```
-
-### Step 5️⃣ Push to Your Fork
-
-```bash
-git push origin feature/amazing-feature
-```
-
-### Step 6️⃣ Create Pull Request
-
-1. Go to your forked repository on GitHub
-2. Click "Compare & pull request"
-3. Fill in the PR template with:
-   - Clear description of changes
-   - Why these changes are needed
-   - How to test the changes
-   - Screenshots (if UI changes)
-   - Related issues (use `Fixes #123`)
-
-### Step 7️⃣ Respond to Feedback
-
-```bash
-# Make requested changes
-git add .
-git commit -m "[fix] Address PR review feedback"
-git push origin feature/amazing-feature
-# Your PR updates automatically
-```
-
-### Step 8️⃣ Celebrate! 🎉
-
-Your PR gets merged and you're now officially a KrishiSetu contributor!
-
----
-
-## 🌟 Why Contribute?
-
-Contributing to KrishiSetu offers numerous benefits:
-
-✨ **Improve Your Skills** — Work with modern technologies and best practices
-🤝 **Collaborative Community** — Learn from experienced developers
-🏆 **Get Recognized** — Earn recognition and build your portfolio
-📜 **Real-World Experience** — Contribute to a project with real-world impact
-🌍 **Social Impact** — Help empower farmers and ensure transparent agriculture
-
----
-
-## ✅ Contribution Best Practices
-
-### ✅ Do's
-
-✅ Read documentation thoroughly before contributing
-✅ Follow code style and project structure
-✅ Write descriptive commit messages
-✅ Test your changes before submitting PR
-✅ Be respectful and collaborative with other contributors
-✅ Ask questions if you're unsure about anything
-✅ Update documentation when adding features
-✅ Give constructive feedback to other contributors
-
-### ❌ Don'ts
-
-❌ Don't spam with multiple PRs for the same issue
-❌ Don't copy code without understanding it
-❌ Don't make unnecessary changes
-❌ Don't ignore code review feedback
-❌ Don't forget to update documentation
-❌ Don't commit sensitive files (`.env`, keys, etc.)
-❌ Don't make commits with inappropriate messages
-❌ Don't claim issues without intent to complete them
-
----
-
-## 👥 Code of Conduct
-
-We are committed to providing a welcoming and inclusive environment for all contributors.
-
-### Our Standards
-
-- Be respectful and kind to all community members
-- Welcome and support newcomers in the community
-- Provide constructive feedback
-- Accept criticism gracefully
-- Focus on what's best for the community
-
-### Unacceptable Behavior
-
-- Harassment, discrimination, or abusive language
-- Offensive comments or personal attacks
-- Publishing private information without consent
-- Trolling or disruptive behavior
-- Any form of "ism" (sexism, racism, etc.)
-
-### Reporting Violations
-
-If you witness or experience violations of our Code of Conduct, please report to the maintainers confidentially at:
-
-📧 **Email**: [aditiraj0205@gmail.com]
-📊 **GitHub**: [Create an issue](../../issues) with `[Code of Conduct]` tag
-
----
-
-## 📧 Contact & Mentorship
-
-For queries, feedback, or guidance regarding this project:
-
-| Name | Role | Contact |
-|------|------|---------|
-| **Mentor 1** | Project Lead | [LinkedIn](https://www.linkedin.com/in/aditi-raj-890358329/) \| [Email](mailto:aditiraj0205@gmail.com) |
-| **Mentor 2** | Tech Lead | [LinkedIn](https://www.linkedin.com/in/piyushydv08/) \| [Email](mailto:piyuhydv011@gmail.com) |
-
-
-### Ways to Connect
-
-💬 **GitHub Discussions** — Ask questions and share ideas
-📧 **Email Mentors** — For direct assistance (mentioned above)
-🐛 **GitHub Issues** — Report bugs or suggest features
-💥 **PR Comments** — Tag maintainers for specific feedback
-
----
-
-## ✨ Contributors
-
-We're grateful to all our wonderful contributors! 💖
-
-<!-- Contributors go here when we have them -->
-*Be the first to contribute! 🚀*
+7. **Push to your fork** and submit a **Pull Request** explaining your enhancements.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - See the [LICENSE](LICENSE) file for details.
-
-**MIT License Summary:**
-- ✅ You can use this code commercially
-- ✅ You can modify and distribute the code
-- ✅ You can use this code privately
-- ❌ You cannot hold the creators liable
-- ℹ️ You must include the original license and copyright notice
-
----
-
-## 🙏 Support & Feedback
-
-If you like this project, please consider:
-
-- ⭐ **Starring** the repository (helps with discoverability)
-- 🔗 **Sharing** with friends and colleagues
-- 💬 **Giving feedback** to help us improve
-- 🤝 **Contributing** your skills and time
-- 📢 **Spreading the word** about transparent agriculture
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-### 🌾 Made with ❤️ for Agriculture & Sustainability
+### 🌾 Empowering Farmers • Connecting Markets • Transforming Agriculture
 
-**Every contribution brings us closer to empowering farmers and ensuring food transparency!**
-
-[⬆ Back to Top](#-krishisetu--transparent-agricultural-supply-chain-platform)
+[⬆ Back to Top](#-agrilink--ai-powered-farmer-market-intelligence--direct-buyer-platform)
 
 </div>

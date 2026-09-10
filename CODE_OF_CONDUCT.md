@@ -36,10 +36,9 @@ This Code of Conduct applies within project spaces, GitHub discussions, issues, 
 
 ## Reporting Violations
 
-If you witness or experience violations of this Code of Conduct, report confidentially to:
+If you witness or experience violations of this Code of Conduct, please report to the project maintainers via:
 
-📧 Email: aditiraj0205@gmail.com  
-📊 GitHub: Create an issue tagged with `[Code of Conduct]`
+📊 **GitHub Issues**: Create an issue tagged with `[Code of Conduct]`
 
 All reports will be reviewed fairly and confidentially.
 
@@ -53,4 +52,4 @@ Contributors violating the Code of Conduct may receive:
 
 ---
 
-This Code of Conduct helps maintain a welcoming environment for everyone contributing to KrishiSetu.
+This Code of Conduct helps maintain a welcoming environment for everyone contributing to AgriLink.
