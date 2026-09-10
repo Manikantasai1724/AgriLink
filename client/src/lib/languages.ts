@@ -1,4 +1,4 @@
-export const LANGUAGE_STORAGE_KEY = "krishisetu_language";
+export const LANGUAGE_STORAGE_KEY = "agrilink_language";
 
 export const DEFAULT_LANGUAGE = "en";
 

@@ -907,15 +907,15 @@ export async function registerRoutes(app: Express) {
       // Email notification to the product owner
       const owner = await storage.getUser(product.ownerId);
       if (owner && owner.email && owner.notificationsEnabled !== false) {
-        const emailSubject = "KrishiSetu - Product Ownership Request";
+        const emailSubject = "AgriLink - Product Ownership Request";
         const emailBody = `
           <h2>Product Ownership Requested</h2>
           <p>Hello <strong>${owner.name}</strong>,</p>
           <p><strong>${requester.name}</strong> has requested ownership of your product <strong>${product.name}</strong>.</p>
-          <p>Please log in to your KrishiSetu dashboard to review and accept/reject this request.</p>
+          <p>Please log in to your AgriLink dashboard to review and accept/reject this request.</p>
           <br/>
           <p>Best regards,</p>
-          <p>The KrishiSetu Team</p>
+          <p>The AgriLink Team</p>
         `;
         await sendEmailNotification(owner.email, emailSubject, emailBody);
       }

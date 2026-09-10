@@ -5,7 +5,7 @@ export async function sendEmailNotification(toEmail: string, subject: string, ht
   const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || "no-reply@krishisetu.com";
+  const from = process.env.SMTP_FROM || "no-reply@agrilink.internal";
 
   if (host && user && pass) {
     try {

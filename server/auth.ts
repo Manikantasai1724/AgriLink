@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
 import { MongoStorage } from "./storage";
 
-const JWT_SECRET = process.env.JWT_SECRET || "krishisetu-secure-jwt-secret-key-2025";
+const JWT_SECRET = process.env.JWT_SECRET || "agrilink-secure-jwt-secret-key-2026";
 const storage = new MongoStorage();
 
 export function hashPassword(password: string): string {
