@@ -61,6 +61,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     else if (token === "valid-token-fpo") lookupId = "uid-fpo";
     else if (token === "valid-token-buyer") lookupId = "uid-buyer";
     else if (token === "valid-token-admin") lookupId = "uid-admin";
+    else if (token === "valid-token-logistics") lookupId = "uid-logistics";
     else {
       const decoded = verifyToken(token);
       lookupId = decoded.id;

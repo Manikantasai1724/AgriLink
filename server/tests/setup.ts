@@ -73,6 +73,15 @@ mockDb.users.set("uid-admin", {
   email: "admin@agrilink.in",
 });
 
+mockDb.users.set("uid-logistics", {
+  id: "user-logistics",
+  firebaseUid: "uid-logistics",
+  role: "logistics",
+  name: "Kisan Logistics",
+  username: "kisanlogistics",
+  email: "logistics@kisan.com",
+});
+
 // Seed a mock ownership transfer for tests
 mockDb.transfers.set("transfer-123", {
   id: "transfer-123",
@@ -123,6 +132,13 @@ vi.mock("../storage", () => {
       const user = { id: "user-" + Date.now(), ...insertUser, createdAt: new Date() };
       mockDb.users.set(user.id, user);
       return user;
+    }
+    async updateUser(id: string, updates: any) {
+      const user = Array.from(mockDb.users.values()).find((u) => u.id === id) || mockDb.users.get(id);
+      if (!user) return null;
+      const updated = { ...user, ...updates };
+      mockDb.users.set(user.firebaseUid || user.id, updated);
+      return updated;
     }
     async createProduct(data: any) {
       const product = { id: "prod-" + Date.now(), ...data };

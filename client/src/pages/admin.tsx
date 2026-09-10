@@ -150,6 +150,12 @@ export default function AdminPage() {
         return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">Admin</Badge>;
       case "farmer":
         return <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200">Farmer</Badge>;
+      case "logistics":
+        return <Badge className="bg-cyan-500/10 text-cyan-600 hover:bg-cyan-500/20 border-cyan-200">🚚 Logistics & Storage</Badge>;
+      case "fpo":
+        return <Badge className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border-indigo-200">👥 FPO Hub</Badge>;
+      case "buyer":
+        return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">🏢 Buyer</Badge>;
       case "distributor":
         return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">Distributor</Badge>;
       case "retailer":
@@ -294,6 +300,9 @@ export default function AdminPage() {
                     >
                       <option value="all">All Roles</option>
                       <option value="farmer">Farmers</option>
+                      <option value="fpo">FPOs</option>
+                      <option value="buyer">Buyers / Processors</option>
+                      <option value="logistics">Logistics & Storage</option>
                       <option value="distributor">Distributors</option>
                       <option value="retailer">Retailers</option>
                       <option value="consumer">Consumers</option>

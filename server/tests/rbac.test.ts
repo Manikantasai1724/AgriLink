@@ -300,5 +300,34 @@ describe("Role-Based Access Control (RBAC) Integration Tests", () => {
       expect(nonAdminRes.status).toBe(403);
     });
   });
+
+  describe("Logistics & Storage User Role Registration and Updates", () => {
+    it("should register a user with logistics role and not default to farmer", async () => {
+      const regRes = await request(app)
+        .post("/api/auth/register")
+        .send({
+          name: "Express Transporter",
+          email: "transport@kisanlogistics.com",
+          username: "expresstransport",
+          password: "LogisticsPass123!",
+          role: "logistics",
+        });
+
+      expect(regRes.status).toBe(201);
+      expect(regRes.body.user).toBeDefined();
+      expect(regRes.body.user.role).toBe("logistics");
+    });
+
+    it("should allow a user to update their role to logistics via PUT /api/user/role", async () => {
+      const updateRes = await request(app)
+        .put("/api/user/role")
+        .set("Authorization", "Bearer valid-token-farmer")
+        .set("firebase-uid", "uid123")
+        .send({ role: "logistics" });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.role).toBe("logistics");
+    });
+  });
 });
 

@@ -193,6 +193,44 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 rounded-lg border border-border/70">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Switch View:</span>
+              <select
+                className="h-7 text-xs font-semibold rounded bg-background px-2 border border-input text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                value={activeRole}
+                onChange={async (e) => {
+                  const newRole = e.target.value;
+                  try {
+                    const token = localStorage.getItem("auth_token") || "";
+                    const res = await fetch("/api/user/role", {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                        "firebase-uid": user?.id || "",
+                      },
+                      body: JSON.stringify({ role: newRole }),
+                    });
+                    if (res.ok) {
+                      toast.success(`Role switched to ${newRole}! Reloading...`);
+                      setTimeout(() => window.location.reload(), 400);
+                    } else {
+                      const err = await res.json();
+                      toast.error(err.message || "Failed to switch role");
+                    }
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to switch role");
+                  }
+                }}
+              >
+                <option value="farmer">🌱 Farmer</option>
+                <option value="fpo">👥 FPO Hub</option>
+                <option value="buyer">🏢 Buyer / Food Processor</option>
+                <option value="logistics">🚚 Logistics & Storage Provider</option>
+                {user?.role === "admin" && <option value="admin">🛡️ Platform Administrator</option>}
+              </select>
+            </div>
+
             <Button
               variant="outline"
               size="sm"

@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ message: "This username is already taken." });
       }
 
-      const validRoles = ["admin", "farmer", "fpo", "buyer", "processor", "trader", "retailer", "distributor", "consumer"];
+      const validRoles = ["admin", "farmer", "fpo", "buyer", "processor", "trader", "retailer", "distributor", "consumer", "logistics"];
       const chosenRole = validRoles.includes(role) ? role : "farmer";
 
       const hashedPassword = hashPassword(password);
@@ -444,7 +444,10 @@ export async function registerRoutes(app: Express) {
   app.get("/api/user/profile", requireFirebaseAuth, async (req: Request, res: Response) => {
     try {
       const firebaseUid = res.locals.firebaseUid as string;
-      const user = await storage.getUserByFirebaseUid(firebaseUid);
+      const user =
+        (res.locals.user as any) ||
+        (res.locals.userId ? await storage.getUser(res.locals.userId) : null) ||
+        (firebaseUid ? await storage.getUserByFirebaseUid(firebaseUid) : null);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -460,12 +463,31 @@ export async function registerRoutes(app: Express) {
   app.put("/api/user/profile", requireFirebaseAuth, async (req: Request, res: Response) => {
     try {
       const firebaseUid = res.locals.firebaseUid as string;
-      const user = await storage.getUserByFirebaseUid(firebaseUid);
+      const user =
+        (res.locals.user as any) ||
+        (res.locals.userId ? await storage.getUser(res.locals.userId) : null) ||
+        (firebaseUid ? await storage.getUserByFirebaseUid(firebaseUid) : null);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
       const updates = filterUserUpdates(req.body || {});
+      if (req.body.role) {
+        const allowedRoles = new Set([
+          "farmer",
+          "fpo",
+          "buyer",
+          "logistics",
+          "distributor",
+          "retailer",
+          "consumer",
+          "admin",
+        ]);
+        if (allowedRoles.has(req.body.role)) {
+          updates.role = req.body.role;
+        }
+      }
+
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ message: "No valid fields to update" });
       }
@@ -1669,12 +1691,24 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ message: "Role is required" });
       }
 
-      const allowedRoles = new Set(["farmer", "distributor", "retailer", "consumer"]);
+      const allowedRoles = new Set([
+        "farmer",
+        "distributor",
+        "retailer",
+        "consumer",
+        "fpo",
+        "buyer",
+        "logistics",
+        "admin",
+      ]);
       if (!allowedRoles.has(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
 
-      const user = await storage.getUserByFirebaseUid(firebaseUid);
+      const user =
+        (res.locals.user as any) ||
+        (res.locals.userId ? await storage.getUser(res.locals.userId) : null) ||
+        (firebaseUid ? await storage.getUserByFirebaseUid(firebaseUid) : null);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
