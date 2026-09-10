@@ -17,7 +17,7 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import { z } from "zod";
 import { analyzeProductQuality, improveGrammar, translateText } from "./ai";
-import { requireAuth, requireAdmin, hashPassword, verifyPassword, signToken } from "./auth";
+import { requireAuth, requireAdmin, requireRole, isRoleAuthorized, hashPassword, verifyPassword, signToken } from "./auth";
 import { uploadPaymentProof } from "./firebaseStorage";
 import { getDb, MongoStorage } from "./storage";
 import { sendEmailNotification } from "./email";
@@ -2143,17 +2143,26 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // =========================================================================
+  // 📡 AGRI-LINK REST APIS WITH ROLE-BASED ACCESS CONTROL (RBAC)
+  // =========================================================================
+
+  // --- 1. Buyer Demands & Procurement ---
   app.get("/api/buyer-demands", async (req: Request, res: Response) => {
     try {
       const crop = req.query.crop as string | undefined;
-      const demands = await storage.getBuyerDemands(crop);
+      const buyerId = req.query.buyerId as string | undefined;
+      let demands = await storage.getBuyerDemands(crop);
+      if (buyerId) {
+        demands = demands.filter((d) => d.buyerId === buyerId);
+      }
       return res.json(demands);
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to fetch buyer demands", error: err.message });
     }
   });
 
-  app.post("/api/buyer-demands", async (req: Request, res: Response) => {
+  app.post("/api/buyer-demands", requireRole(["buyer", "distributor", "retailer", "admin"]), async (req: Request, res: Response) => {
     try {
       const demand = await storage.createBuyerDemand(req.body);
       return res.status(201).json(demand);
@@ -2162,19 +2171,33 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // --- Produce Lots ---
-  app.get("/api/lots", async (req: Request, res: Response) => {
+  // --- 2. Produce Lots & Matching Engine ---
+  const handleGetProduceLots = async (req: Request, res: Response) => {
     try {
-      const sellerId = req.query.sellerId as string | undefined;
+      const user = res.locals?.user;
+      const userRole = (user?.role || req.header("x-user-role") || req.query.role || "").toLowerCase();
+      const isAdmin = userRole === "admin";
+
+      let sellerId = (req.query.sellerId || req.query.seller) as string | undefined;
       const crop = req.query.crop as string | undefined;
-      const lots = await storage.getProduceLots(sellerId, crop);
+      const status = req.query.status as string | undefined;
+
+      // Role isolation: If farmer or FPO, default to their own lots unless explicitly requesting marketplace
+      if (!isAdmin && (userRole === "farmer" || userRole === "fpo") && !req.query.marketplace && !sellerId) {
+        sellerId = user?.id || (req.header("firebase-uid") as string);
+      }
+
+      const lots = await storage.getProduceLots(sellerId, crop, status);
       return res.json(lots);
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to fetch produce lots", error: err.message });
     }
-  });
+  };
 
-  app.get("/api/lots/:id", async (req: Request, res: Response) => {
+  app.get("/api/produce-lots", handleGetProduceLots);
+  app.get("/api/lots", handleGetProduceLots);
+
+  const handleGetProduceLotById = async (req: Request, res: Response) => {
     try {
       const lot = await storage.getProduceLotById(req.params.id);
       if (!lot) return res.status(404).json({ message: "Produce lot not found" });
@@ -2182,18 +2205,24 @@ export async function registerRoutes(app: Express) {
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to fetch lot", error: err.message });
     }
-  });
+  };
 
-  app.post("/api/lots", async (req: Request, res: Response) => {
+  app.get("/api/produce-lots/:id", handleGetProduceLotById);
+  app.get("/api/lots/:id", handleGetProduceLotById);
+
+  const handleCreateProduceLot = async (req: Request, res: Response) => {
     try {
       const lot = await storage.createProduceLot(req.body);
       return res.status(201).json(lot);
     } catch (err: any) {
       return res.status(400).json({ message: "Failed to create produce lot", error: err.message });
     }
-  });
+  };
 
-  app.put("/api/lots/:id", async (req: Request, res: Response) => {
+  app.post("/api/produce-lots", requireRole(["farmer", "fpo", "admin"]), handleCreateProduceLot);
+  app.post("/api/lots", requireRole(["farmer", "fpo", "admin"]), handleCreateProduceLot);
+
+  const handleUpdateProduceLot = async (req: Request, res: Response) => {
     try {
       const updated = await storage.updateProduceLotStatus(req.params.id, req.body.status);
       if (!updated) return res.status(404).json({ message: "Produce lot not found" });
@@ -2201,28 +2230,15 @@ export async function registerRoutes(app: Express) {
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to update lot", error: err.message });
     }
-  });
+  };
 
-  // --- AI Quality Assessment ---
-  app.post("/api/quality/assess", async (req: Request, res: Response) => {
-    try {
-      const { crop, moisturePercent, defectPercent, sizeCategory, colorUniformity } = req.body;
-      const assessment = assessProduceQuality(crop || "Tomato", {
-        moisturePercent: Number(moisturePercent),
-        defectPercent: Number(defectPercent),
-        sizeCategory,
-        colorUniformity,
-      });
-      return res.json(assessment);
-    } catch (err: any) {
-      return res.status(500).json({ message: "Quality assessment failed", error: err.message });
-    }
-  });
+  app.put("/api/produce-lots/:id", handleUpdateProduceLot);
+  app.put("/api/lots/:id", handleUpdateProduceLot);
 
-  // --- AI Buyer Matching Engine ---
-  app.get("/api/matches/:lotId", async (req: Request, res: Response) => {
+  const handleGetProduceLotMatches = async (req: Request, res: Response) => {
     try {
-      const lot = await storage.getProduceLotById(req.params.lotId);
+      const lotId = req.params.id || req.params.lotId;
+      const lot = await storage.getProduceLotById(lotId);
       if (!lot) return res.status(404).json({ message: "Produce lot not found" });
 
       const demands = await storage.getBuyerDemands(lot.crop);
@@ -2235,7 +2251,10 @@ export async function registerRoutes(app: Express) {
     } catch (err: any) {
       return res.status(500).json({ message: "Matching failed", error: err.message });
     }
-  });
+  };
+
+  app.get("/api/produce-lots/:id/matches", requireRole(["farmer", "fpo", "buyer", "distributor", "retailer", "admin"]), handleGetProduceLotMatches);
+  app.get("/api/matches/:lotId", handleGetProduceLotMatches);
 
   app.post("/api/matches", async (req: Request, res: Response) => {
     try {
@@ -2254,40 +2273,161 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // --- Digital Offers ---
-  app.get("/api/offers", async (req: Request, res: Response) => {
+  // --- 3. AI Quality & Translation Services ---
+  const handleQualityAssess = async (req: Request, res: Response) => {
     try {
-      const sellerId = req.query.sellerId as string | undefined;
-      const buyerId = req.query.buyerId as string | undefined;
+      const { crop, moisturePercent, defectPercent, sizeCategory, colorUniformity, image } = req.body;
+      
+      let visionAssessment: any = null;
+      if (image) {
+        visionAssessment = await analyzeProductQuality(image);
+      }
+
+      const assessment: any = assessProduceQuality(crop || "Tomato", {
+        moisturePercent: Number(moisturePercent) || 12,
+        defectPercent: Number(defectPercent) || 2,
+        sizeCategory,
+        colorUniformity,
+      });
+
+      if (visionAssessment) {
+        assessment.qualityScore = Math.round(visionAssessment.score * 10);
+        assessment.aiNotes = `Vision assessment: ${visionAssessment.explanation}`;
+      }
+
+      return res.json(assessment);
+    } catch (err: any) {
+      return res.status(500).json({ message: "Quality assessment failed", error: err.message });
+    }
+  };
+
+  app.post("/api/ai/analyze-quality", handleQualityAssess);
+  app.post("/api/quality/assess", handleQualityAssess);
+
+  app.post("/api/ai/translate", async (req: Request, res: Response) => {
+    try {
+      const text = req.body.text || req.body.content || "";
+      const targetLanguage = req.body.targetLanguage || req.body.language || "te";
+      if (!text.trim()) {
+        return res.status(400).json({ message: "Text to translate is required" });
+      }
+      const translated = await translateText(text, targetLanguage);
+      return res.json({
+        original: text,
+        targetLanguage,
+        translatedText: translated,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ message: "Translation service failed", error: err.message });
+    }
+  });
+
+  // --- 4. Digital Offers & Negotiation ---
+  const handleGetOffers = async (req: Request, res: Response) => {
+    try {
+      const user = res.locals?.user;
+      const userRole = (user?.role || req.header("x-user-role") || req.query.role || "").toLowerCase();
+      const isAdmin = userRole === "admin";
+
+      let sellerId = req.query.sellerId as string | undefined;
+      let buyerId = req.query.buyerId as string | undefined;
       const lotId = req.query.lotId as string | undefined;
+
+      // Strict role isolation: users can only see their own negotiations
+      if (!isAdmin) {
+        const callerId = user?.id || (req.header("firebase-uid") as string);
+        if (callerId) {
+          if (userRole === "farmer" || userRole === "fpo") {
+            sellerId = sellerId || callerId;
+          } else if (userRole === "buyer" || userRole === "distributor" || userRole === "retailer") {
+            buyerId = buyerId || callerId;
+          }
+        }
+      }
+
       const offers = await storage.getOffers(sellerId, buyerId, lotId);
       return res.json(offers);
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to fetch offers", error: err.message });
     }
-  });
+  };
 
-  app.post("/api/offers", async (req: Request, res: Response) => {
+  app.get("/api/agri-offers", handleGetOffers);
+  app.get("/api/offers", handleGetOffers);
+
+  const handleCreateOffer = async (req: Request, res: Response) => {
     try {
       const offer = await storage.createOffer(req.body);
       return res.status(201).json(offer);
     } catch (err: any) {
       return res.status(400).json({ message: "Failed to create offer", error: err.message });
     }
-  });
+  };
 
-  app.put("/api/offers/:id", async (req: Request, res: Response) => {
+  app.post("/api/agri-offers", requireRole(["buyer", "distributor", "retailer", "admin"]), handleCreateOffer);
+  app.post("/api/offers", requireRole(["buyer", "distributor", "retailer", "admin"]), handleCreateOffer);
+
+  const handleUpdateOfferStatus = async (req: Request, res: Response) => {
     try {
       const { status, counterPrice } = req.body;
-      const updated = await storage.updateOfferStatus(req.params.id, status, counterPrice);
-      if (!updated) return res.status(404).json({ message: "Offer not found" });
-      return res.json(updated);
-    } catch (err: any) {
-      return res.status(500).json({ message: "Failed to update offer", error: err.message });
-    }
-  });
+      const offerId = req.params.id;
+      const existingOffer = await storage.getOfferById(offerId);
 
-  app.post("/api/offers/:id/counter", async (req: Request, res: Response) => {
+      const updated = await storage.updateOfferStatus(offerId, status, counterPrice);
+      if (!updated) return res.status(404).json({ message: "Offer not found" });
+
+      let createdTransaction = null;
+      // Convert to transaction automatically upon offer acceptance
+      if (status === "Accepted" && existingOffer) {
+        const lot = existingOffer.lotId ? await storage.getProduceLotById(existingOffer.lotId) : null;
+        const agreedPrice = updated.counterPrice || updated.offeredPrice;
+        const gross = (Number(updated.quantity) || 100) * agreedPrice;
+        const logCost = updated.estimatedLogisticsCost || 0;
+        const net = gross - logCost;
+
+        createdTransaction = await storage.createAgriTransaction({
+          lotId: updated.lotId,
+          lotNumber: updated.lotNumber || lot?.lotNumber || `LOT-${Date.now()}`,
+          crop: updated.crop || lot?.crop || "Produce",
+          quantity: updated.quantity,
+          unit: updated.unit || "Quintal",
+          agreedPricePerUnit: agreedPrice,
+          grossAmount: gross,
+          logisticsCost: logCost,
+          storageCost: 0,
+          netRealizationAmount: net,
+          sellerId: updated.sellerId || lot?.sellerId || "seller",
+          sellerName: lot?.sellerName || "Farmer / FPO",
+          sellerRole: lot?.sellerRole || "farmer",
+          buyerId: updated.buyerId,
+          buyerName: updated.buyerName,
+          buyerType: updated.buyerType,
+          status: "Offer Accepted",
+          stageTimestamps: {
+            "Lot Created": lot?.createdAt ? new Date(lot.createdAt).toISOString() : new Date().toISOString(),
+            "Offer Accepted": new Date().toISOString(),
+          },
+        });
+
+        if (lot) {
+          await storage.updateProduceLotStatus(lot.id, "Offer Accepted");
+        }
+      }
+
+      return res.json({
+        ...updated,
+        transaction: createdTransaction,
+        transactionId: createdTransaction?.id,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ message: "Failed to update offer status", error: err.message });
+    }
+  };
+
+  app.patch("/api/agri-offers/:id/status", requireRole(["farmer", "fpo", "buyer", "distributor", "retailer", "admin"]), handleUpdateOfferStatus);
+  app.put("/api/offers/:id", requireRole(["farmer", "fpo", "buyer", "distributor", "retailer", "admin"]), handleUpdateOfferStatus);
+
+  app.post("/api/offers/:id/counter", requireRole(["farmer", "fpo", "buyer", "distributor", "retailer", "admin"]), async (req: Request, res: Response) => {
     try {
       const { counterPrice } = req.body;
       const updated = await storage.updateOfferStatus(req.params.id, "Countered", Number(counterPrice));
@@ -2298,30 +2438,58 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // --- End-to-End Transactions ---
-  app.get("/api/transactions", async (req: Request, res: Response) => {
+  // --- 5. Transactions & Settlement ---
+  const handleGetTransactions = async (req: Request, res: Response) => {
     try {
-      const userId = req.query.userId as string | undefined;
-      const role = req.query.role as string | undefined;
+      const user = res.locals?.user;
+      const userRole = (user?.role || req.header("x-user-role") || req.query.role || "").toLowerCase();
+      const isAdmin = userRole === "admin";
+
+      let userId = (req.query.userId || user?.id || (req.header("firebase-uid") as string)) as string | undefined;
+      let role = (req.query.role || userRole) as string | undefined;
+
+      // Restrict access: Non-admins must only access transactions where they are the buyer, seller, or logistics
+      if (!isAdmin && !userId && userRole !== "logistics") {
+        return res.json([]);
+      }
+
       const transactions = await storage.getAgriTransactions(userId, role);
       return res.json(transactions);
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to fetch transactions", error: err.message });
     }
-  });
+  };
 
-  app.get("/api/transactions/:id", async (req: Request, res: Response) => {
+  app.get("/api/agri-transactions", handleGetTransactions);
+  app.get("/api/transactions", handleGetTransactions);
+
+  const handleGetTransactionById = async (req: Request, res: Response) => {
     try {
       const txn = await storage.getAgriTransactionById(req.params.id);
       if (!txn) return res.status(404).json({ message: "Transaction not found" });
+
+      const user = res.locals?.user;
+      const userRole = (user?.role || req.header("x-user-role") || "").toLowerCase();
+      const isAdmin = userRole === "admin";
+      const callerId = user?.id || req.header("firebase-uid");
+
+      // Verify caller is a party to the transaction or logistics/admin
+      if (!isAdmin && callerId && userRole !== "logistics") {
+        if (txn.sellerId !== callerId && txn.buyerId !== callerId) {
+          return res.status(403).json({ message: "Access denied. You are not a party to this transaction." });
+        }
+      }
+
       return res.json(txn);
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to fetch transaction", error: err.message });
     }
-  });
+  };
 
+  app.get("/api/agri-transactions/:id", handleGetTransactionById);
+  app.get("/api/transactions/:id", handleGetTransactionById);
 
-  app.put("/api/transactions/:id/status", async (req: Request, res: Response) => {
+  const handleUpdateTransactionStatus = async (req: Request, res: Response) => {
     try {
       const { status, logisticsDetails, paymentStatus, paymentReference, paymentProofUrl } = req.body;
       const updates: any = {};
@@ -2335,60 +2503,47 @@ export async function registerRoutes(app: Express) {
       if (!updated) return res.status(404).json({ message: "Transaction not found" });
       return res.json(updated);
     } catch (err: any) {
-      return res.status(500).json({ message: "Failed to update transaction", error: err.message });
+      return res.status(500).json({ message: "Failed to update transaction status", error: err.message });
     }
-  });
+  };
 
-  // --- Logistics & Storage ---
-  app.get("/api/logistics", async (_req: Request, res: Response) => {
-    try {
-      const logistics = await storage.getLogisticsOptions();
-      return res.json(logistics);
-    } catch (err: any) {
-      return res.status(500).json({ message: "Failed to fetch logistics options", error: err.message });
-    }
-  });
+  app.patch("/api/agri-transactions/:id/status", handleUpdateTransactionStatus);
+  app.put("/api/transactions/:id/status", handleUpdateTransactionStatus);
 
-  app.post("/api/logistics", async (req: Request, res: Response) => {
+  const handleRecordPayment = async (req: Request, res: Response) => {
     try {
-      const db = await getDb();
-      const result = await db.collection("agri_logistics").insertOne(req.body);
-      return res.status(201).json({ success: true, id: result.insertedId });
-    } catch (err: any) {
-      return res.status(500).json({ message: "Failed to create logistics provider", error: err.message });
-    }
-  });
-
-  app.get("/api/storage", async (_req: Request, res: Response) => {
-    try {
-      const facilities = await storage.getStorageFacilities();
-      return res.json(facilities);
-    } catch (err: any) {
-      return res.status(500).json({ message: "Failed to fetch storage facilities", error: err.message });
-    }
-  });
-
-  app.post("/api/storage/reserve", async (req: Request, res: Response) => {
-    try {
-      const { storageId, lotNumber, quantityQuintals, durationMonths, farmerName } = req.body;
-      const reservationId = `RES-STR-${Math.floor(1000 + Math.random() * 9000)}`;
-      return res.json({
-        success: true,
-        reservationId,
-        message: `Storage reservation confirmed for ${quantityQuintals} quintals for ${durationMonths || 1} month(s).`,
-        lotNumber,
-        farmerName,
+      const transactionId = req.params.id || req.body.transactionId;
+      const { paymentReference, paymentMethod, paymentProofUrl } = req.body;
+      const updated = await storage.updateAgriTransaction(transactionId, {
+        paymentStatus: "Paid",
+        paymentReference: paymentReference || `UTR-${Date.now()}`,
+        paymentMethod: paymentMethod || "Direct Bank Transfer / Escrow",
+        paymentProofUrl: paymentProofUrl || "https://example.com/receipt.pdf",
+        paymentDate: new Date().toISOString(),
+        status: "Payment Received",
       });
+      if (!updated) return res.status(404).json({ message: "Transaction not found" });
+      return res.json({ success: true, message: "Payment proof verified and updated.", transaction: updated });
     } catch (err: any) {
-      return res.status(500).json({ message: "Storage reservation failed", error: err.message });
+      return res.status(500).json({ message: "Failed to record payment", error: err.message });
     }
-  });
+  };
 
-  // --- Payments ---
+  app.patch("/api/agri-transactions/:id/payment", handleRecordPayment);
+  app.post("/api/payments/proof", handleRecordPayment);
+
   app.get("/api/payments", async (req: Request, res: Response) => {
     try {
-      const userId = req.query.userId as string | undefined;
-      const role = req.query.role as string | undefined;
+      const user = res.locals?.user;
+      const userRole = (user?.role || req.header("x-user-role") || req.query.role || "").toLowerCase();
+      const isAdmin = userRole === "admin";
+      let userId = (req.query.userId || user?.id || (req.header("firebase-uid") as string)) as string | undefined;
+      let role = (req.query.role || userRole) as string | undefined;
+
+      if (!isAdmin && !userId) {
+        return res.json([]);
+      }
+
       const txns = await storage.getAgriTransactions(userId, role);
       const payments = txns.map((t) => ({
         id: `pay-${t.id}`,
@@ -2412,23 +2567,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/proof", async (req: Request, res: Response) => {
-    try {
-      const { transactionId, paymentReference, paymentMethod, paymentProofUrl, amount } = req.body;
-      const updated = await storage.updateAgriTransaction(transactionId, {
-        paymentStatus: "Paid",
-        paymentReference: paymentReference || `UTR-${Date.now()}`,
-        paymentMethod: paymentMethod || "Direct Bank Transfer / Escrow",
-        paymentProofUrl: paymentProofUrl || "https://example.com/receipt.pdf",
-        paymentDate: new Date().toISOString(),
-        status: "Payment Received",
-      });
-      return res.json({ success: true, message: "Payment proof verified and updated.", transaction: updated });
-    } catch (err: any) {
-      return res.status(500).json({ message: "Failed to record payment proof", error: err.message });
-    }
-  });
-
   app.put("/api/payments/:id/status", async (req: Request, res: Response) => {
     try {
       const { paymentStatus, paymentReference } = req.body;
@@ -2437,17 +2575,93 @@ export async function registerRoutes(app: Express) {
         paymentReference,
         status: paymentStatus === "Paid" ? "Payment Received" : undefined,
       });
+      if (!updated) return res.status(404).json({ message: "Transaction not found" });
       return res.json(updated);
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to update payment status", error: err.message });
     }
   });
 
-  // --- Disputes & Grievances ---
+  // --- 6. Logistics & Storage ---
+  const handleGetLogistics = async (_req: Request, res: Response) => {
+    try {
+      const logistics = await storage.getLogisticsOptions();
+      return res.json(logistics);
+    } catch (err: any) {
+      return res.status(500).json({ message: "Failed to fetch logistics options", error: err.message });
+    }
+  };
+
+  app.get("/api/logistics-options", handleGetLogistics);
+  app.get("/api/logistics", handleGetLogistics);
+
+  const handleCreateLogistics = async (req: Request, res: Response) => {
+    try {
+      const db = await getDb();
+      const result = await db.collection("agri_logistics").insertOne(req.body);
+      return res.status(201).json({ success: true, id: result.insertedId });
+    } catch (err: any) {
+      return res.status(500).json({ message: "Failed to create logistics provider", error: err.message });
+    }
+  };
+
+  app.post("/api/logistics-options", requireRole(["logistics", "distributor", "admin"]), handleCreateLogistics);
+  app.post("/api/logistics", requireRole(["logistics", "distributor", "admin"]), handleCreateLogistics);
+
+  const handleGetStorage = async (_req: Request, res: Response) => {
+    try {
+      const facilities = await storage.getStorageFacilities();
+      return res.json(facilities);
+    } catch (err: any) {
+      return res.status(500).json({ message: "Failed to fetch storage facilities", error: err.message });
+    }
+  };
+
+  app.get("/api/storage-facilities", handleGetStorage);
+  app.get("/api/storage", handleGetStorage);
+
+  const handleCreateStorage = async (req: Request, res: Response) => {
+    try {
+      const db = await getDb();
+      const result = await db.collection("agri_storage_facilities").insertOne(req.body);
+      return res.status(201).json({ success: true, id: result.insertedId });
+    } catch (err: any) {
+      return res.status(500).json({ message: "Failed to create storage facility", error: err.message });
+    }
+  };
+
+  app.post("/api/storage-facilities", requireRole(["logistics", "admin"]), handleCreateStorage);
+  app.post("/api/storage", requireRole(["logistics", "admin"]), handleCreateStorage);
+
+  app.post("/api/storage/reserve", async (req: Request, res: Response) => {
+    try {
+      const { storageId, lotNumber, quantityQuintals, durationMonths, farmerName } = req.body;
+      const reservationId = `RES-STR-${Math.floor(1000 + Math.random() * 9000)}`;
+      return res.json({
+        success: true,
+        reservationId,
+        message: `Storage reservation confirmed for ${quantityQuintals} quintals for ${durationMonths || 1} month(s).`,
+        lotNumber,
+        farmerName,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ message: "Storage reservation failed", error: err.message });
+    }
+  });
+
+  // --- 7. Disputes & Grievances ---
   app.get("/api/disputes", async (req: Request, res: Response) => {
     try {
-      const userId = req.query.userId as string | undefined;
-      const isAdmin = req.query.isAdmin === "true";
+      const user = res.locals?.user;
+      const userRole = (user?.role || req.header("x-user-role") || "").toLowerCase();
+      const isAdmin = userRole === "admin" || req.query.isAdmin === "true";
+      const userId = (req.query.userId || user?.id || (req.header("firebase-uid") as string)) as string | undefined;
+
+      // Non-admins can only see disputes in which they are involved
+      if (!isAdmin && !userId) {
+        return res.json([]);
+      }
+
       const disputes = await storage.getDisputes(userId, isAdmin);
       return res.json(disputes);
     } catch (err: any) {
@@ -2464,28 +2678,30 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.put("/api/disputes/:id", async (req: Request, res: Response) => {
+  const handleResolveDispute = async (req: Request, res: Response) => {
     try {
       const { status, adminNotes, resolution } = req.body;
       const updated = await storage.updateDispute(req.params.id, {
-        status,
+        status: status || "Resolved",
         adminNotes,
-        resolution,
+        resolution: resolution || "Administrative resolution determined.",
       });
       if (!updated) return res.status(404).json({ message: "Dispute not found" });
       return res.json(updated);
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to update dispute", error: err.message });
     }
-  });
+  };
 
-  // --- FPO Aggregation ---
-  app.get("/api/fpo/members", async (req: Request, res: Response) => {
+  app.patch("/api/disputes/:id/resolve", requireAdmin, handleResolveDispute);
+  app.put("/api/disputes/:id", requireAdmin, handleResolveDispute);
+
+  // --- 8. FPO Aggregation ---
+  const handleGetFpoMembers = async (req: Request, res: Response) => {
     try {
       const fpoId = (req.query.fpoId as string) || "fpo-default";
       const members = await storage.getFpoMembers(fpoId);
       if (members.length === 0) {
-        // Return realistic initial members for demo FPO
         const sampleMembers = [
           {
             id: "fpm-01",
@@ -2530,18 +2746,24 @@ export async function registerRoutes(app: Express) {
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to fetch FPO members", error: err.message });
     }
-  });
+  };
 
-  app.post("/api/fpo/members", async (req: Request, res: Response) => {
+  app.get("/api/fpo-members", requireRole(["fpo", "admin"]), handleGetFpoMembers);
+  app.get("/api/fpo/members", requireRole(["fpo", "admin"]), handleGetFpoMembers);
+
+  const handleCreateFpoMember = async (req: Request, res: Response) => {
     try {
       const member = await storage.createFpoMember(req.body);
       return res.status(201).json(member);
     } catch (err: any) {
-      return res.status(400).json({ message: "Failed to add Fpo member", error: err.message });
+      return res.status(400).json({ message: "Failed to add FPO member", error: err.message });
     }
-  });
+  };
 
-  app.post("/api/fpo/aggregate-lot", async (req: Request, res: Response) => {
+  app.post("/api/fpo-members", requireRole(["fpo", "admin"]), handleCreateFpoMember);
+  app.post("/api/fpo/members", requireRole(["fpo", "admin"]), handleCreateFpoMember);
+
+  app.post("/api/fpo/aggregate-lot", requireRole(["fpo", "admin"]), async (req: Request, res: Response) => {
     try {
       const { fpoId, fpoName, crop, memberContributors, expectedPricePerUnit, qualityGrade } = req.body;
       const totalQty = (memberContributors || []).reduce((sum: number, m: any) => sum + Number(m.quantity || 0), 0);

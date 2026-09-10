@@ -29,13 +29,25 @@ export default function PaymentsPage() {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchPayments();
-  }, []);
+    if (user) {
+      fetchPayments();
+    }
+  }, [user]);
 
   const fetchPayments = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/payments");
+      const token = localStorage.getItem("auth_token") || "";
+      const url = user?.role === "admin"
+        ? "/api/payments"
+        : `/api/payments?userId=${user?.id || ""}&role=${user?.role || ""}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "firebase-uid": user?.id || "",
+          "x-user-role": user?.role || "",
+        },
+      });
       if (res.ok) {
         setPayments(await res.json());
       }

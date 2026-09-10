@@ -1037,7 +1037,7 @@ export class MongoStorage {
   }
 
   // Produce Lots
-  async getProduceLots(sellerId?: string, crop?: string): Promise<ProduceLot[]> {
+  async getProduceLots(sellerId?: string, crop?: string, status?: string): Promise<ProduceLot[]> {
     const db = await getDb();
     const query: any = {};
     if (sellerId) {
@@ -1045,6 +1045,9 @@ export class MongoStorage {
     }
     if (crop && crop !== "all") {
       query.crop = { $regex: new RegExp(`^${crop}$`, "i") };
+    }
+    if (status && status !== "all") {
+      query.status = status;
     }
     return db.collection<ProduceLot>("agri_produce_lots").find(query).sort({ createdAt: -1 }).toArray();
   }
@@ -1116,6 +1119,11 @@ export class MongoStorage {
     if (buyerId) query.buyerId = buyerId;
     if (lotId) query.lotId = lotId;
     return db.collection<AgriOffer>("agri_offers").find(query).sort({ createdAt: -1 }).toArray();
+  }
+
+  async getOfferById(id: string): Promise<AgriOffer | null> {
+    const db = await getDb();
+    return db.collection<AgriOffer>("agri_offers").findOne({ id });
   }
 
   async createOffer(offer: Partial<AgriOffer>): Promise<AgriOffer> {

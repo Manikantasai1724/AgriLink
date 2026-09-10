@@ -46,6 +46,33 @@ mockDb.users.set("uid-consumer", {
   email: "charlie@consumer.com",
 });
 
+mockDb.users.set("uid-fpo", {
+  id: "user-fpo",
+  firebaseUid: "uid-fpo",
+  role: "fpo",
+  name: "Sahyadri FPO",
+  username: "sahyadrifpo",
+  email: "fpo@sahyadri.com",
+});
+
+mockDb.users.set("uid-buyer", {
+  id: "user-buyer",
+  firebaseUid: "uid-buyer",
+  role: "buyer",
+  name: "Reliance Fresh",
+  username: "relbuyer",
+  email: "procurement@reliance.com",
+});
+
+mockDb.users.set("uid-admin", {
+  id: "user-admin",
+  firebaseUid: "uid-admin",
+  role: "admin",
+  name: "Admin Alice",
+  username: "adminuser",
+  email: "admin@agrilink.in",
+});
+
 // Seed a mock ownership transfer for tests
 mockDb.transfers.set("transfer-123", {
   id: "transfer-123",
@@ -116,6 +143,66 @@ vi.mock("../storage", () => {
     async getProduct(id: string) {
       return mockDb.products.get(id) || null;
     }
+    async createProduceLot(data: any) {
+      return { id: "lot-mock-1", lotNumber: "AGL-CRP-2026-123456", ...data };
+    }
+    async getProduceLots() {
+      return [];
+    }
+    async getProduceLotById(id: string) {
+      return { id, lotNumber: "AGL-CRP-2026-123456", crop: "Tomato", quantity: 100, sellerId: "user-farmer", status: "Available" };
+    }
+    async updateProduceLotStatus(id: string, status: string) {
+      return { id, status };
+    }
+    async createBuyerDemand(data: any) {
+      return { id: "dem-mock-1", ...data };
+    }
+    async getBuyerDemands() {
+      return [];
+    }
+    async getOffers() {
+      return [];
+    }
+    async getOfferById(id: string) {
+      return { id, lotId: "lot-mock-1", lotNumber: "AGL-CRP-2026-123456", offeredPrice: 2800, quantity: 50, sellerId: "user-farmer", buyerId: "user-buyer", buyerName: "Reliance Fresh", status: "Pending" };
+    }
+    async updateOfferStatus(id: string, status: string, counterPrice?: number) {
+      return { id, status, counterPrice, lotId: "lot-mock-1", lotNumber: "AGL-CRP-2026-123456", offeredPrice: 2800, quantity: 50, sellerId: "user-farmer", buyerId: "user-buyer", buyerName: "Reliance Fresh" };
+    }
+    async createAgriTransaction(data: any) {
+      return { id: "txn-mock-1", transactionCode: "TXN-AGL-8941", ...data };
+    }
+    async getAgriTransactions() {
+      return [];
+    }
+    async getAgriTransactionById(id: string) {
+      return { id, transactionCode: "TXN-AGL-8941", status: "Transaction Confirmed" };
+    }
+    async updateAgriTransaction(id: string, updates: any) {
+      return { id, ...updates };
+    }
+    async getFpoMembers() {
+      return [{ id: "fpm-1", name: "Ramesh Farmer", landSizeAcres: 5 }];
+    }
+    async createFpoMember(data: any) {
+      return { id: "fpm-new", ...data };
+    }
+    async getDisputes() {
+      return [];
+    }
+    async createDispute(data: any) {
+      return { id: "disp-mock-1", disputeCode: "DSP-2026-112", ...data };
+    }
+    async updateDispute(id: string, updates: any) {
+      return { id, ...updates };
+    }
+    async getLogisticsOptions() {
+      return [];
+    }
+    async getStorageFacilities() {
+      return [];
+    }
   }
 
   return {
@@ -133,6 +220,9 @@ vi.mock("../firebaseJwt", () => {
       if (token === "valid-token-distributor") return { uid: "uid-distributor" };
       if (token === "valid-token-retailer") return { uid: "uid-retailer" };
       if (token === "valid-token-consumer") return { uid: "uid-consumer" };
+      if (token === "valid-token-fpo") return { uid: "uid-fpo" };
+      if (token === "valid-token-buyer") return { uid: "uid-buyer" };
+      if (token === "valid-token-admin") return { uid: "uid-admin" };
       throw new Error("Invalid token");
     }),
   };

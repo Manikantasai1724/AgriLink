@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Bell, Edit3, Globe, Shield, Sprout, Store, Truck, User, Users } from "lucide-react";
+import { Bell, Edit3, Globe, Shield, Sprout, Store, Truck, User, Users, Building2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -34,10 +34,13 @@ import { getLanguageMeta, languages as supportedLanguages } from "@/lib/language
 import { apiRequest } from "@/lib/queryClient";
 
 const roles = [
-  { id: "farmer", title: "Farmer", icon: Sprout, color: "bg-primary" },
+  { id: "farmer", title: "Farmer", icon: Sprout, color: "bg-emerald-600" },
+  { id: "fpo", title: "FPO Hub", icon: Users, color: "bg-indigo-600" },
+  { id: "buyer", title: "Buyer / Processor", icon: Building2, color: "bg-blue-600" },
+  { id: "logistics", title: "Logistics Provider", icon: Truck, color: "bg-cyan-600" },
   { id: "distributor", title: "Distributor", icon: Truck, color: "bg-accent" },
   { id: "retailer", title: "Retailer", icon: Store, color: "bg-warning" },
-  { id: "consumer", title: "Consumer", icon: Users, color: "bg-verified" },
+  { id: "admin", title: "Platform Admin", icon: ShieldCheck, color: "bg-rose-600" },
 ];
 
 const languages = [

@@ -14,6 +14,25 @@ export interface CropHistoricalTrend {
 }
 
 export const INITIAL_MARKET_PRICES: MarketPrice[] = [
+  // ─── TOMATO ───
+  {
+    id: "mkt-tom-01",
+    crop: "Tomato",
+    marketName: "Pimpalgaon Mandi",
+    district: "Nashik",
+    state: "Maharashtra",
+    minPrice: 2400,
+    maxPrice: 3000,
+    modalPrice: 2700,
+    arrivalVolumeTons: 450,
+    distanceKm: 32,
+    transportCostPerQtl: 95,
+    netRealization: 2605,
+    date: "2026-09-08",
+    priceTrend5d: "up",
+    priceChangePercent: 4.2,
+    isDemoData: true,
+  },
   // ─── PADDY / RICE (Primary Crop of West Godavari / Bhimavaram) ───
   {
     id: "mkt-ric-01",

@@ -58,6 +58,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     else if (token === "valid-token-distributor") lookupId = "uid-distributor";
     else if (token === "valid-token-retailer") lookupId = "uid-retailer";
     else if (token === "valid-token-consumer") lookupId = "uid-consumer";
+    else if (token === "valid-token-fpo") lookupId = "uid-fpo";
+    else if (token === "valid-token-buyer") lookupId = "uid-buyer";
+    else if (token === "valid-token-admin") lookupId = "uid-admin";
     else {
       const decoded = verifyToken(token);
       lookupId = decoded.id;
@@ -103,3 +106,55 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     return next();
   });
 };
+
+export const isRoleAuthorized = (userRole: string, allowedRoles: string[]): boolean => {
+  const normUserRole = (userRole || "farmer").toLowerCase().trim();
+  if (normUserRole === "admin") return true; // Administrator oversight
+  const normAllowed = allowedRoles.map((r) => r.toLowerCase().trim());
+  if (normAllowed.includes(normUserRole)) return true;
+  // Buyer procurement role aliasing (buyer includes commercial distributors and retailers)
+  if (normAllowed.includes("buyer") && (normUserRole === "distributor" || normUserRole === "retailer")) {
+    return true;
+  }
+  // Logistics transport role aliasing
+  if (normAllowed.includes("logistics") && normUserRole === "distributor") {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Middleware that validates caller role against allowed roles.
+ */
+export const requireRole = (allowedRoles: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const token = getBearerToken(req);
+    const headerRole = (req.header("x-user-role") || req.query.role || req.body?.sellerRole || req.body?.role) as string | undefined;
+
+    if (token) {
+      return requireAuth(req, res, () => {
+        const user = res.locals.user;
+        const effectiveRole = user?.role || headerRole || "farmer";
+        if (!isRoleAuthorized(effectiveRole, allowedRoles)) {
+          return res.status(403).json({
+            message: `Access denied. Role '${effectiveRole}' is not authorized to access this resource. Permitted roles: ${allowedRoles.join(", ")}`,
+            role: effectiveRole,
+            permittedRoles: allowedRoles,
+          });
+        }
+        return next();
+      });
+    }
+
+    const effectiveRole = headerRole || "farmer";
+    if (!isRoleAuthorized(effectiveRole, allowedRoles)) {
+      return res.status(403).json({
+        message: `Access denied. Role '${effectiveRole}' is not authorized to access this resource. Permitted roles: ${allowedRoles.join(", ")}`,
+        role: effectiveRole,
+        permittedRoles: allowedRoles,
+      });
+    }
+    return next();
+  };
+};
+

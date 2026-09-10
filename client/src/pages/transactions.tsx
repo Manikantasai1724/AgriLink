@@ -47,13 +47,25 @@ export default function TransactionsPage() {
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    if (user) {
+      fetchTransactions();
+    }
+  }, [user]);
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/transactions");
+      const token = localStorage.getItem("auth_token") || "";
+      const url = user?.role === "admin"
+        ? "/api/transactions"
+        : `/api/transactions?userId=${user?.id || ""}&role=${user?.role || ""}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "firebase-uid": user?.id || "",
+          "x-user-role": user?.role || "",
+        },
+      });
       if (res.ok) {
         const data: AgriTransaction[] = await res.json();
         setTransactions(data);

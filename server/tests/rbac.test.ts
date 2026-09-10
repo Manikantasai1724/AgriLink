@@ -145,4 +145,116 @@ describe("Role-Based Access Control (RBAC) Integration Tests", () => {
       expect(res.body.message).toContain("Forbidden: Only retailers can register retailer details.");
     });
   });
+
+  describe("AgriLink Role-Based API Permissions", () => {
+    it("should allow farmer to create a produce lot via /api/produce-lots", async () => {
+      const res = await request(app)
+        .post("/api/produce-lots")
+        .set("Authorization", "Bearer valid-token-farmer")
+        .set("firebase-uid", "uid123")
+        .send({
+          crop: "Tomato",
+          quantity: 100,
+          expectedPricePerUnit: 2600,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.crop).toBe("Tomato");
+    });
+
+    it("should forbid a buyer from creating a produce lot", async () => {
+      const res = await request(app)
+        .post("/api/produce-lots")
+        .set("Authorization", "Bearer valid-token-buyer")
+        .set("firebase-uid", "uid-buyer")
+        .send({
+          crop: "Tomato",
+          quantity: 100,
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain("Access denied. Role 'buyer' is not authorized");
+    });
+
+    it("should allow buyer to create a buyer demand via /api/buyer-demands", async () => {
+      const res = await request(app)
+        .post("/api/buyer-demands")
+        .set("Authorization", "Bearer valid-token-buyer")
+        .set("firebase-uid", "uid-buyer")
+        .send({
+          crop: "Rice",
+          requiredQuantity: 200,
+          targetPricePerUnit: 2800,
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it("should forbid a farmer from creating a buyer demand", async () => {
+      const res = await request(app)
+        .post("/api/buyer-demands")
+        .set("Authorization", "Bearer valid-token-farmer")
+        .set("firebase-uid", "uid123")
+        .send({
+          crop: "Rice",
+          requiredQuantity: 200,
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain("Access denied. Role 'farmer' is not authorized");
+    });
+
+    it("should allow FPO to fetch member roster via /api/fpo-members", async () => {
+      const res = await request(app)
+        .get("/api/fpo-members")
+        .set("Authorization", "Bearer valid-token-fpo")
+        .set("firebase-uid", "uid-fpo");
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    it("should forbid non-FPO / non-admin from fetching FPO roster", async () => {
+      const res = await request(app)
+        .get("/api/fpo-members")
+        .set("Authorization", "Bearer valid-token-buyer")
+        .set("firebase-uid", "uid-buyer");
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain("Access denied. Role 'buyer' is not authorized");
+    });
+
+    it("should convert offer to transaction when accepted via PATCH /api/agri-offers/:id/status", async () => {
+      const res = await request(app)
+        .patch("/api/agri-offers/off-123/status")
+        .set("Authorization", "Bearer valid-token-farmer")
+        .set("firebase-uid", "uid123")
+        .send({ status: "Accepted" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("Accepted");
+      expect(res.body.transaction).toBeDefined();
+    });
+
+    it("should allow admin to resolve dispute via PATCH /api/disputes/:id/resolve", async () => {
+      const res = await request(app)
+        .patch("/api/disputes/disp-1/resolve")
+        .set("Authorization", "Bearer valid-token-admin")
+        .set("firebase-uid", "uid-admin")
+        .send({ status: "Resolved", resolution: "Refund 10% to buyer" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("Resolved");
+    });
+
+    it("should forbid non-admin from resolving dispute", async () => {
+      const res = await request(app)
+        .patch("/api/disputes/disp-1/resolve")
+        .set("Authorization", "Bearer valid-token-farmer")
+        .set("firebase-uid", "uid123")
+        .send({ status: "Resolved" });
+
+      expect(res.status).toBe(403);
+    });
+  });
 });

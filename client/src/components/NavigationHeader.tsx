@@ -343,9 +343,15 @@ useEffect(() => {
     );
   }
 
-  const isFarmerOrFpo = ["farmer", "fpo", "admin"].includes(user.role);
+  const userRole = (user.role || "farmer").toLowerCase();
+  const isFarmer = ["farmer", "admin"].includes(userRole);
+  const isFpo = ["fpo", "admin"].includes(userRole);
+  const isBuyer = ["buyer", "distributor", "retailer", "admin"].includes(userRole);
+  const isLogistics = ["logistics", "distributor", "admin"].includes(userRole);
+  const isAdmin = userRole === "admin";
+  const isFarmerOrFpo = isFarmer || isFpo;
 
-  // 1. Primary Top Navigation Links (Desktop)
+  // 1. Primary Top Navigation Links (Role-Adaptive)
   const primaryNavLinks = [
     {
       href: "/dashboard",
@@ -358,14 +364,14 @@ useEffect(() => {
       href: "/market-intelligence",
       label: "Market Intelligence",
       icon: TrendingUp,
-      show: true,
+      show: isFarmer || isFpo || isAdmin,
       testid: "link-market-intelligence",
     },
     {
       href: "/buyer-demand",
-      label: "Buyer Demand",
+      label: isBuyer ? "Procurement Demands" : "Buyer Demands",
       icon: ShoppingBag,
-      show: true,
+      show: isBuyer || isFpo || isFarmer,
       testid: "link-buyer-demand",
     },
     {
@@ -376,11 +382,32 @@ useEffect(() => {
       testid: "link-create-lot",
     },
     {
+      href: "/fpo-aggregation",
+      label: "FPO Hub",
+      icon: Users,
+      show: isFpo,
+      testid: "link-fpo-hub",
+    },
+    {
       href: "/offers-matches",
       label: "Offers & Matches",
       icon: Layers,
-      show: true,
+      show: isFarmer || isBuyer || isFpo || isAdmin,
       testid: "link-offers",
+    },
+    {
+      href: "/logistics-storage",
+      label: "Logistics Network",
+      icon: Truck,
+      show: isLogistics && !isFarmer && !isFpo,
+      testid: "link-logistics-primary",
+    },
+    {
+      href: "/admin",
+      label: "Admin Console",
+      icon: ShieldCheck,
+      show: isAdmin,
+      testid: "link-admin-primary",
     },
   ];
 

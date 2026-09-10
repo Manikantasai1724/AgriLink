@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
-  const [role, setRole] = useState<"farmer" | "distributor" | "retailer" | "consumer" | "admin">("farmer");
+  const [role, setRole] = useState<"farmer" | "fpo" | "buyer" | "distributor" | "retailer" | "logistics" | "admin">("farmer");
   const [phone, setPhone] = useState("");
   const [locationField, setLocationField] = useState("");
   const [company, setCompany] = useState("");
@@ -253,11 +253,11 @@ export default function LoginPage() {
                         <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="farmer">🌾 Farmer (Producer)</SelectItem>
-                        <SelectItem value="distributor">🚚 Distributor (Logistics)</SelectItem>
-                        <SelectItem value="retailer">🏪 Retailer (Shop/Market)</SelectItem>
-                        <SelectItem value="consumer">👥 Consumer (Buyer)</SelectItem>
-                        <SelectItem value="admin">🛡️ Admin (System Overseer)</SelectItem>
+                        <SelectItem value="farmer">🌱 Farmer (Agricultural Producer)</SelectItem>
+                        <SelectItem value="fpo">👥 FPO (Farmer Producer Organization)</SelectItem>
+                        <SelectItem value="buyer">🏢 Buyer / Food Processor (Procurement)</SelectItem>
+                        <SelectItem value="logistics">🚚 Logistics & Storage Provider</SelectItem>
+                        <SelectItem value="admin">🛡️ Platform Administrator</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

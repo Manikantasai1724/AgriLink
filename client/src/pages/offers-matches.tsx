@@ -44,8 +44,10 @@ export default function OffersMatchesPage() {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchLots();
-  }, []);
+    if (user) {
+      fetchLots();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (selectedLotId) {
@@ -55,7 +57,16 @@ export default function OffersMatchesPage() {
 
   const fetchLots = async () => {
     try {
-      const res = await fetch("/api/lots");
+      const token = localStorage.getItem("auth_token") || "";
+      const isFarmerOrFpo = user?.role === "farmer" || user?.role === "fpo";
+      const url = isFarmerOrFpo ? `/api/lots?sellerId=${user?.id}` : "/api/lots";
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "firebase-uid": user?.id || "",
+          "x-user-role": user?.role || "",
+        },
+      });
       if (res.ok) {
         const data: ProduceLot[] = await res.json();
         setLots(data);

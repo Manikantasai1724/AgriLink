@@ -132,42 +132,71 @@ export default function CreateLotPage() {
         storageRequirement,
       };
 
-      const res = await fetch("/api/lots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const lot = await res.json();
-        toast({
-          title: "Produce Lot Created Successfully",
-          description: `Lot ID ${lot.lotNumber} registered. Matching buyers now...`,
+        const token = localStorage.getItem("auth_token") || "";
+        const res = await fetch("/api/lots", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "firebase-uid": user?.id || "",
+            "x-user-role": user?.role || "",
+          },
+          body: JSON.stringify(payload),
         });
-        setLocation(`/offers-matches?lotId=${lot.id}`);
-      } else {
-        const err = await res.json();
+
+        if (res.ok) {
+          const lot = await res.json();
+          toast({
+            title: "Produce Lot Created Successfully",
+            description: `Lot ID ${lot.lotNumber} registered. Matching buyers now...`,
+          });
+          setLocation(`/offers-matches?lotId=${lot.id}`);
+        } else {
+          const err = await res.json();
+          toast({
+            title: "Submission Failed",
+            description: err.message || "Failed to create produce lot.",
+            variant: "destructive",
+          });
+        }
+      } catch (err: any) {
+        console.error(err);
         toast({
-          title: "Submission Failed",
-          description: err.message || "Failed to create produce lot.",
+          title: "Error",
+          description: err.message || "Network error submitting lot.",
           variant: "destructive",
         });
+      } finally {
+        setSubmitting(false);
       }
-    } catch (err: any) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: err.message || "Network error submitting lot.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <NavigationHeader />
+    const userRole = (user?.role || "farmer").toLowerCase();
+    const isAuthorizedProducer = userRole === "farmer" || userRole === "fpo" || userRole === "admin";
+
+    if (!isAuthorizedProducer) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col">
+          <NavigationHeader />
+          <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-16 text-center space-y-4">
+            <div className="bg-card border rounded-2xl p-8 shadow-sm space-y-4">
+              <Package className="w-12 h-12 text-muted-foreground mx-auto" />
+              <h2 className="text-2xl font-bold text-foreground">Access Restricted</h2>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                Produce lot registration is exclusively reserved for agricultural producers (Farmers, FPOs, and Platform Administrators).
+              </p>
+              <Button onClick={() => setLocation("/dashboard")} className="mt-2">
+                Return to Your Dashboard
+              </Button>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <NavigationHeader />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="border-b pb-4">

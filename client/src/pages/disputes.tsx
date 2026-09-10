@@ -42,13 +42,25 @@ export default function DisputesPage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchDisputes();
-  }, []);
+    if (user) {
+      fetchDisputes();
+    }
+  }, [user]);
 
   const fetchDisputes = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/disputes");
+      const token = localStorage.getItem("auth_token") || "";
+      const url = user?.role === "admin"
+        ? "/api/disputes?isAdmin=true"
+        : `/api/disputes?userId=${user?.id || ""}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "firebase-uid": user?.id || "",
+          "x-user-role": user?.role || "",
+        },
+      });
       if (res.ok) {
         setDisputes(await res.json());
       }

@@ -46,12 +46,22 @@ export default function FpoAggregationPage() {
 
   useEffect(() => {
     fetchMembers();
-  }, []);
+  }, [user]);
+
+  const userRole = (user?.role || "farmer").toLowerCase();
+  const isAuthorizedFpo = userRole === "fpo" || userRole === "admin";
 
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/fpo/members?fpoId=${user?.id || "fpo-default"}`);
+      const token = localStorage.getItem("auth_token") || "";
+      const res = await fetch(`/api/fpo/members?fpoId=${user?.id || "fpo-default"}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "firebase-uid": user?.id || "",
+          "x-user-role": user?.role || "",
+        },
+      });
       if (res.ok) {
         const data = await res.json();
         setMembers(data);
@@ -146,6 +156,26 @@ export default function FpoAggregationPage() {
       setAggregating(false);
     }
   };
+
+  if (!isAuthorizedFpo) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <NavigationHeader />
+        <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-16 text-center space-y-4">
+          <div className="bg-card border rounded-2xl p-8 shadow-sm space-y-4">
+            <Users className="w-12 h-12 text-muted-foreground mx-auto" />
+            <h2 className="text-2xl font-bold text-foreground">Access Restricted</h2>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              The FPO Produce Aggregation and Member Roster view is exclusively accessible to registered Farmer Producer Organizations (FPO) and Platform Administrators.
+            </p>
+            <Button onClick={() => setLocation("/dashboard")} className="mt-2">
+              Return to Your Dashboard
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
