@@ -4,9 +4,9 @@ import {
   ArrowLeft,
   Calendar,
   Clock,
-  DollarSign,
   Download,
   History,
+  IndianRupee,
   MapPin,
   Package,
   Star,
@@ -314,7 +314,7 @@ export default function ProductDetails() {
 
     doc.text(`Registered Date: ${product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "N/A"}`, leftColX, yPos);
     if (product.price) {
-      doc.text(`Price: INR ${product.price}`, rightColX, yPos);
+      doc.text(`Price: ₹${product.price} (INR)`, rightColX, yPos);
     }
     yPos += 5;
     
@@ -584,7 +584,7 @@ export default function ProductDetails() {
                     {product.price && (
                       <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/10">
                         <div className="flex items-start gap-3">
-                          <DollarSign className="w-5 h-5 text-primary mt-0.5" />
+                          <IndianRupee className="w-5 h-5 text-primary mt-0.5" />
                           <div>
                             <div className="text-sm font-medium text-foreground">Direct Price</div>
                             <div className="text-lg font-bold text-primary">₹{product.price}</div>

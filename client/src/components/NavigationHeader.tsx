@@ -86,11 +86,28 @@ export function NavigationHeader() {
     (n) => !n.read && (n.type === "ownership_request" || n.type === "product_request")
   );
 
-useEffect(() => {
-  const handleScroll = () => setShowScrollTop(window.scrollY > 100);
-  window.addEventListener("scroll", handleScroll);
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
+  useEffect(() => {
+    const handleScroll = () => setShowScrollTop(window.scrollY > 100);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Auto-close mobile drawer when location changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location]);
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   // Fetch unread notifications (we keep only unread in dropdown)
   useEffect(() => {
@@ -264,21 +281,21 @@ useEffect(() => {
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <QuickLanguageSwitcher />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 data-testid="button-theme-toggle"
-                className="h-9 w-9"
+                className="h-9 w-9 p-0"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
               <Button
                 onClick={() => setLocation("/login")}
                 data-testid="button-login"
-                className="hidden md:flex whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 h-9 shadow-sm"
+                className="hidden sm:flex whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3 sm:px-4 h-9 shadow-sm"
               >
                 Sign In / Register
               </Button>
@@ -288,7 +305,7 @@ useEffect(() => {
                   size="icon"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   aria-label="Toggle menu"
-                  className="h-9 w-9"
+                  className="h-9 w-9 p-0"
                 >
                   {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </Button>
@@ -297,46 +314,87 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Mobile menu for logged-out */}
+        {/* Mobile menu backdrop for logged-out */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-card/95 backdrop-blur-md px-4 py-3 space-y-2">
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/market-intelligence"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-            >
-              Market Intelligence
-            </Link>
-            <Link
-              href="/buyer-demand"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-            >
-              Buyer Demand
-            </Link>
-            <Link
-              href="/verified-buyers"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-            >
-              Verified Buyers
-            </Link>
-            <Button
-              onClick={() => {
-                setLocation("/login");
-                setMobileMenuOpen(false);
-              }}
-              className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-            >
-              Sign In / Register
-            </Button>
+          <div
+            className="fixed inset-0 top-16 bg-black/50 backdrop-blur-xs z-40 md:hidden transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Mobile menu drawer for logged-out */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-x-0 top-16 max-h-[calc(100vh-4rem)] overflow-y-auto z-50 bg-background/95 backdrop-blur-md px-4 py-5 space-y-3 shadow-2xl md:hidden border-b border-border animate-in slide-in-from-top-2 duration-200">
+            <div className="space-y-1">
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActiveRoute("/dashboard")
+                    ? "text-primary bg-primary/10 font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
+              </Link>
+              <Link
+                href="/market-intelligence"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActiveRoute("/market-intelligence")
+                    ? "text-primary bg-primary/10 font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Market Intelligence</span>
+              </Link>
+              <Link
+                href="/buyer-demand"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActiveRoute("/buyer-demand")
+                    ? "text-primary bg-primary/10 font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Buyer Demand</span>
+              </Link>
+              <Link
+                href="/verified-buyers"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActiveRoute("/verified-buyers")
+                    ? "text-primary bg-primary/10 font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Verified Buyers</span>
+              </Link>
+              <Link
+                href="/how-it-works"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>How It Works</span>
+              </Link>
+            </div>
+            <div className="pt-3 border-t border-border">
+              <Button
+                onClick={() => {
+                  setLocation("/login");
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm text-sm"
+              >
+                Sign In / Register
+              </Button>
+            </div>
           </div>
         )}
       </nav>
@@ -722,14 +780,14 @@ useEffect(() => {
             </div>
 
             {/* Right: Notifications, Theme, User Profile, Mobile Toggle */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <QuickLanguageSwitcher />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 data-testid="button-theme-toggle"
-                className="h-9 w-9"
+                className="h-9 w-9 p-0"
               >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
@@ -740,7 +798,7 @@ useEffect(() => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative h-9 w-9"
+                    className="relative h-9 w-9 p-0"
                     data-testid="button-notifications"
                   >
                     <Bell className="h-4 w-4" />
@@ -770,33 +828,29 @@ useEffect(() => {
                       No new notifications.
                     </div>
                   ) : (
-                    sortedNotifications.map((notif) => {
-                      const isOwnership =
-                        notif.type === "ownership_request" ||
-                        notif.type === "product_request" ||
-                        notif.requestType === "ownership" ||
-                        notif.ownershipRequest === true;
-
+                    sortedNotifications.map((notif: any) => {
+                      const isOwnershipOrProductRequest =
+                        notif.type === "ownership_request" || notif.type === "product_request";
                       const isRead = notif.read;
-                      const notifClass = isRead ? "opacity-50" : "";
+                      const notifClass = isRead ? "opacity-60 bg-muted/30" : "bg-card";
 
-                      if (isOwnership) {
+                      if (isOwnershipOrProductRequest) {
                         return (
                           <div
                             key={notif.id}
-                            className={`p-3 border-b last:border-b-0 ${notifClass}`}
+                            className={`p-3 border-b last:border-0 ${notifClass}`}
                           >
-                            <div className="flex justify-between items-start gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-xs truncate">{notif.title}</div>
-                                <div className="text-xs text-muted-foreground truncate mt-0.5">
-                                  {notif.message}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground/75 mt-1">
-                                  {new Date(notif.createdAt).toLocaleString()}
-                                </div>
+                            <div className="flex flex-col gap-1.5">
+                              <div className="font-medium text-xs text-foreground">
+                                {notif.title}
                               </div>
-                              <div className="flex flex-col items-end gap-1.5 ml-2 flex-shrink-0">
+                              <div className="text-xs text-muted-foreground">
+                                {notif.message}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground/75">
+                                {new Date(notif.createdAt).toLocaleString()}
+                              </div>
+                              <div className="flex items-center justify-between mt-1 pt-1 border-t border-border/40">
                                 <div className="flex gap-1.5">
                                   <Button
                                     size="sm"
@@ -849,7 +903,7 @@ useEffect(() => {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 p-1.5 h-auto rounded-lg hover:bg-muted"
+                    className="flex items-center gap-1.5 p-1 sm:p-1.5 h-auto rounded-lg hover:bg-muted"
                     data-testid="button-user-menu"
                   >
                     <Avatar className="w-8 h-8 border border-emerald-600/30">
@@ -858,7 +912,7 @@ useEffect(() => {
                         {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="hidden sm:block text-left max-w-[130px] truncate leading-tight">
+                    <div className="hidden sm:block text-left max-w-[120px] truncate leading-tight">
                       <div
                         className="text-xs font-bold text-foreground truncate"
                         data-testid="text-user-name"
@@ -874,7 +928,7 @@ useEffect(() => {
                         {user.role}
                       </div>
                     </div>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:inline" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52 p-1.5 shadow-xl">
@@ -924,7 +978,7 @@ useEffect(() => {
                   size="icon"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   aria-label="Toggle menu"
-                  className="h-9 w-9"
+                  className="h-9 w-9 p-0"
                   data-testid="button-mobile-menu"
                 >
                   {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -932,74 +986,150 @@ useEffect(() => {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Mobile Menu Drawer */}
-          {mobileMenuOpen && (
-            <div className="lg:hidden mt-2 space-y-3 px-2 pb-4 pt-2 border-t border-border bg-card">
-              {/* Category 1: Market & Trading */}
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3">
-                  Market & Trading
-                </span>
-                <div className="space-y-0.5 mt-1">
-                  {primaryNavLinks
-                    .filter((l) => l.show)
-                    .map((link) => {
-                      const Icon = link.icon;
-                      const active = isActiveRoute(link.href);
-                      return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                            active
-                              ? "text-primary bg-primary/10 font-bold"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          }`}
-                          data-testid={link.testid}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span>{link.label}</span>
-                        </Link>
-                      );
-                    })}
-                </div>
-              </div>
+        {/* Mobile menu backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 top-16 bg-black/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
 
-              {/* Category 2: Supply Chain & Operations */}
-              <div className="border-t pt-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3">
-                  Supply Chain & Operations
-                </span>
-                <div className="space-y-0.5 mt-1">
-                  {operationsLinks
-                    .filter((l) => l.show)
-                    .map((link) => {
-                      const Icon = link.icon;
-                      const active = isActiveRoute(link.href);
-                      return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                            active
-                              ? "text-primary bg-primary/10 font-bold"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          }`}
-                          data-testid={link.testid}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span>{link.label}</span>
-                        </Link>
-                      );
-                    })}
+        {/* Mobile Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-x-0 top-16 max-h-[calc(100vh-4rem)] overflow-y-auto z-50 px-4 py-4 space-y-4 bg-background/98 backdrop-blur-md border-b border-border shadow-2xl lg:hidden animate-in slide-in-from-top-2 duration-200">
+            {/* User Profile Card */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/60 border border-border/60">
+              <Avatar className="w-10 h-10 border border-emerald-600/30">
+                <AvatarImage src={user.profileImage || undefined} alt={user.name} />
+                <AvatarFallback className="bg-emerald-600 text-white font-bold text-xs">
+                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm font-bold text-foreground truncate">{user.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-emerald-600/15 text-emerald-600 dark:text-emerald-400 capitalize">
+                    {user.role}
+                  </span>
                 </div>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Category 1: Market & Trading */}
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+                Market & Trading
+              </span>
+              <div className="space-y-1 mt-1">
+                {primaryNavLinks
+                  .filter((l) => l.show)
+                  .map((link) => {
+                    const Icon = link.icon;
+                    const active = isActiveRoute(link.href);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          active
+                            ? "text-primary bg-primary/10 font-bold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        }`}
+                        data-testid={`mobile-${link.testid}`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{link.label}</span>
+                      </Link>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Category 2: Supply Chain & Operations */}
+            <div className="border-t pt-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+                Supply Chain & Operations
+              </span>
+              <div className="space-y-1 mt-1">
+                {operationsLinks
+                  .filter((l) => l.show)
+                  .map((link) => {
+                    const Icon = link.icon;
+                    const active = isActiveRoute(link.href);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                          active
+                            ? "text-primary bg-primary/10 font-bold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        }`}
+                        data-testid={`mobile-${link.testid}`}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate">{link.label}</span>
+                          <span className="text-[11px] text-muted-foreground font-normal truncate">{link.desc}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Category 3: Account & Management */}
+            <div className="border-t pt-3 space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2">
+                Account & Settings
+              </span>
+              {user.role === "admin" && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Admin Console</span>
+                </Link>
+              )}
+              <Link
+                href="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <User className="w-4 h-4" />
+                <span>My Profile</span>
+              </Link>
+              <Link
+                href="/registered-products"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <Package className="w-4 h-4" />
+                <span>Registered Products</span>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setMobileMenuOpen(false);
+                  await logout();
+                  setLocation("/login");
+                }}
+                className="w-full mt-3 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 flex items-center justify-center gap-2 text-xs font-semibold h-10"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </Button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Modal overlays (fixed, centered) */}

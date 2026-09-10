@@ -551,13 +551,13 @@ export function ProductRegistrationForm({ isVisible, onClose }: ProductRegistrat
                       name="price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Product Price *</FormLabel>
+                          <FormLabel>Product Price (₹) *</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              placeholder="Enter price"
+                              placeholder="Enter price in ₹ (e.g. 2500)"
                               {...field}
                               required
                               data-testid="input-product-price"

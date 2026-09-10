@@ -309,14 +309,14 @@ export const RetailerProductForm: React.FC<RetailerProductFormProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Purchase Price *</Label>
+                  <Label>Purchase Price (₹) *</Label>
                   <Input
                     type="number"
                     min="0"
                     step="0.01"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Enter purchase price"
+                    placeholder="Enter purchase price in ₹ (e.g. 2500)"
                     required
                   />
                 </div>

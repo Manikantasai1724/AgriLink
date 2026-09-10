@@ -8,6 +8,7 @@ export const userSchema = z.object({
   username: z.string(),
   role: z.string().default("farmer"),
   password: z.string().nullable().optional(),
+  plainPassword: z.string().nullable().optional(),
   firebaseUid: z.string().nullable().optional(),
   profileImage: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
@@ -24,6 +25,7 @@ export type User = z.infer<typeof userSchema>;
 
 export const insertUserSchema = userSchema.omit({ id: true, createdAt: true }).extend({
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  plainPassword: z.string().optional(),
   createdAt: z.date().optional(),
 });
 export type InsertUser = z.infer<typeof insertUserSchema>;

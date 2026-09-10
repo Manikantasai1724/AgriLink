@@ -177,6 +177,7 @@ export class MongoStorage {
       username: insertUser.username.toLowerCase(),
       role: insertUser.role || "farmer",
       password: insertUser.password || null,
+      plainPassword: insertUser.plainPassword || null,
       firebaseUid: insertUser.firebaseUid || null,
       profileImage: insertUser.profileImage || null,
       phone: insertUser.phone || null,

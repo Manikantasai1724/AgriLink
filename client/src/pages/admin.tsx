@@ -24,6 +24,10 @@ import {
   Mail,
   RefreshCw,
   Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Key,
 } from "lucide-react";
 
 export default function AdminPage() {
@@ -33,6 +37,22 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const togglePasswordVisibility = (userId: string) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
+  const handleCopyPassword = (userId: string, pass: string) => {
+    if (!pass) return;
+    navigator.clipboard.writeText(pass);
+    setCopiedId(userId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   // Fetch admin stats
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<any>({
@@ -296,6 +316,7 @@ export default function AdminPage() {
                           <TableHead>User</TableHead>
                           <TableHead>Role</TableHead>
                           <TableHead>Contact (Phone/Email)</TableHead>
+                          <TableHead>Password</TableHead>
                           <TableHead>Farm / Business</TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead>Registered</TableHead>
@@ -324,6 +345,41 @@ export default function AdminPage() {
                                   </div>
                                 )}
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {u.plainPassword ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono text-xs px-2 py-1 bg-muted rounded border border-border/50 max-w-[130px] truncate select-all">
+                                    {visiblePasswords[u.id] ? u.plainPassword : "••••••••••••"}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    title={visiblePasswords[u.id] ? "Hide password" : "View password"}
+                                    onClick={() => togglePasswordVisibility(u.id)}
+                                  >
+                                    {visiblePasswords[u.id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    title="Copy password"
+                                    onClick={() => handleCopyPassword(u.id, u.plainPassword)}
+                                  >
+                                    {copiedId === u.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </div>
+                              ) : u.hasLegacyPassword || u.password ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-600 border border-amber-300/40" title="Account created prior to viewable password support; stored as salted scrypt hash.">
+                                  Pre-update (Hashed)
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">None (OAuth)</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               {u.company ? (

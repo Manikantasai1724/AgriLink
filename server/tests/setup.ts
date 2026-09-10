@@ -106,6 +106,24 @@ vi.mock("../storage", () => {
     async getUserByFirebaseUid(uid: string) {
       return mockDb.users.get(uid) || null;
     }
+    async getUserByEmail(email: string) {
+      return Array.from(mockDb.users.values()).find((u) => u.email?.toLowerCase() === email.toLowerCase()) || null;
+    }
+    async getUserByUsername(username: string) {
+      return Array.from(mockDb.users.values()).find((u) => u.username?.toLowerCase() === username.toLowerCase()) || null;
+    }
+    async getUserByEmailOrUsername(id: string) {
+      const lower = id.toLowerCase();
+      return Array.from(mockDb.users.values()).find((u) => u.email?.toLowerCase() === lower || u.username?.toLowerCase() === lower) || null;
+    }
+    async getAllUsers() {
+      return Array.from(mockDb.users.values());
+    }
+    async createUser(insertUser: any) {
+      const user = { id: "user-" + Date.now(), ...insertUser, createdAt: new Date() };
+      mockDb.users.set(user.id, user);
+      return user;
+    }
     async createProduct(data: any) {
       const product = { id: "prod-" + Date.now(), ...data };
       mockDb.products.set(product.id, product);

@@ -1,6 +1,6 @@
 // Update your ProductHistory component
 
-import { Calendar, DollarSign, Eye, MapPin, Package, User } from "lucide-react";
+import { Calendar, Eye, IndianRupee, MapPin, Package, User } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,7 +51,7 @@ const FIELD_ICONS: Record<string, React.ReactNode> = {
   warehouseLocation: <MapPin className="w-3 h-3 mr-1" />,
   dispatchDate: <Calendar className="w-3 h-3 mr-1" />,
   certifications: <Package className="w-3 h-3 mr-1" />,
-  price: <DollarSign className="w-3 h-3 mr-1" />,
+  price: <IndianRupee className="w-3 h-3 mr-1" />,
   paymentProofUrl: <Package className="w-3 h-3 mr-1" />,
   storeName: <User className="w-3 h-3 mr-1" />,
   storeLocation: <MapPin className="w-3 h-3 mr-1" />,
@@ -120,7 +120,7 @@ export function ProductHistory({ productId }: ProductHistoryProps) {
     }
 
     if (field === "price" && value) {
-      return `$${parseFloat(value).toFixed(2)}`;
+      return `₹${parseFloat(value).toLocaleString("en-IN")}`;
     }
 
     if (field === "dispatchDate" || field === "arrivalDate") {

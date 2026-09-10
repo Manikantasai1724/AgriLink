@@ -233,6 +233,7 @@ export async function registerRoutes(app: Express) {
         email: cleanEmail,
         username: cleanUsername,
         password: hashedPassword,
+        plainPassword: String(password),
         role: chosenRole,
         phone: phone ? String(phone).trim() : null,
         location: location ? String(location).trim() : null,
@@ -243,7 +244,7 @@ export async function registerRoutes(app: Express) {
       });
 
       const token = signToken(user);
-      const { password: _, ...safeUser } = user;
+      const { password: _, plainPassword: __, ...safeUser } = user;
 
       return res.status(201).json({
         token,
@@ -276,7 +277,7 @@ export async function registerRoutes(app: Express) {
       }
 
       const token = signToken(user);
-      const { password: _, ...safeUser } = user;
+      const { password: _, plainPassword: __, ...safeUser } = user;
 
       return res.json({
         token,
@@ -291,7 +292,7 @@ export async function registerRoutes(app: Express) {
 
   app.get("/api/auth/me", requireAuth, async (_req: Request, res: Response) => {
     const user = res.locals.user;
-    const { password: _, ...safeUser } = user;
+    const { password: _, plainPassword: __, ...safeUser } = user;
     return res.json(safeUser);
   });
 
@@ -305,8 +306,18 @@ export async function registerRoutes(app: Express) {
   app.get("/api/admin/users", requireAdmin, async (_req: Request, res: Response) => {
     try {
       const users = await storage.getAllUsers();
-      const safeUsers = users.map(({ password: _, ...u }) => u);
-      return res.json(safeUsers);
+      const adminUsersList = users.map((u: any) => {
+        const { password: rawPasswordHash, plainPassword, ...rest } = u;
+        return {
+          ...rest,
+          // If plainPassword was captured, admin sees it directly.
+          // If account was created prior to storing plainPassword, display hashed indicator
+          password: plainPassword || (rawPasswordHash ? `[Hashed: ${rawPasswordHash.slice(0, 14)}...]` : null),
+          plainPassword: plainPassword || null,
+          hasLegacyPassword: Boolean(!plainPassword && rawPasswordHash),
+        };
+      });
+      return res.json(adminUsersList);
     } catch (error: any) {
       console.error("Admin fetch users error:", error);
       return res.status(500).json({ message: "Failed to fetch users" });

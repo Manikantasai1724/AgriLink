@@ -18,7 +18,7 @@ export function QuickLanguageSwitcher() {
         <Button
           variant="ghost"
           className="
-            h-10 gap-1.5 px-2
+            h-9 gap-1 px-1.5 sm:px-2.5
             font-medium
             hover:bg-muted/60
             transition-colors
@@ -26,13 +26,16 @@ export function QuickLanguageSwitcher() {
           aria-label="Change language"
           data-testid="button-language-switcher"
         >
-          <Globe className="h-4 w-4" />
+          <Globe className="h-4 w-4 flex-shrink-0" />
 
-          <span className="text-sm">
+          <span className="sm:hidden text-xs uppercase font-bold text-muted-foreground">
+            {language}
+          </span>
+          <span className="hidden sm:inline text-xs">
             {languageMeta.nativeName || languageMeta?.shortName || language}
           </span>
 
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          <ChevronDown className="h-3 w-3 text-muted-foreground hidden xs:inline" />
         </Button>
       </DropdownMenuTrigger>
 

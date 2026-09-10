@@ -257,4 +257,48 @@ describe("Role-Based Access Control (RBAC) Integration Tests", () => {
       expect(res.status).toBe(403);
     });
   });
+
+  describe("Admin View User Passwords (GET /api/admin/users)", () => {
+    it("should allow admin to view registered user passwords", async () => {
+      // First, register a new user
+      const registerRes = await request(app)
+        .post("/api/auth/register")
+        .send({
+          name: "Test Pass User",
+          email: "testpass@farm.com",
+          username: "testpass",
+          password: "SecretPassword123!",
+          role: "farmer",
+        });
+
+      expect(registerRes.status).toBe(201);
+      // Ensure regular response does not leak plain or hashed password
+      expect(registerRes.body.user.password).toBeUndefined();
+      expect(registerRes.body.user.plainPassword).toBeUndefined();
+
+      // Now fetch as admin
+      const adminRes = await request(app)
+        .get("/api/admin/users")
+        .set("Authorization", "Bearer valid-token-admin")
+        .set("firebase-uid", "uid-admin");
+
+      expect(adminRes.status).toBe(200);
+      expect(Array.isArray(adminRes.body)).toBe(true);
+
+      const targetUser = adminRes.body.find((u: any) => u.email === "testpass@farm.com");
+      expect(targetUser).toBeDefined();
+      expect(targetUser.plainPassword).toBe("SecretPassword123!");
+      expect(targetUser.password).toBe("SecretPassword123!");
+    });
+
+    it("should reject non-admin users from viewing registered user passwords", async () => {
+      const nonAdminRes = await request(app)
+        .get("/api/admin/users")
+        .set("Authorization", "Bearer valid-token-farmer")
+        .set("firebase-uid", "uid123");
+
+      expect(nonAdminRes.status).toBe(403);
+    });
+  });
 });
+
