@@ -324,6 +324,32 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  app.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const targetUserId = req.params.id;
+      const currentAdmin = res.locals.user;
+
+      if (currentAdmin && (currentAdmin.id === targetUserId || currentAdmin.firebaseUid === targetUserId)) {
+        return res.status(400).json({ message: "You cannot delete your own admin account." });
+      }
+
+      const user = (await storage.getUser(targetUserId)) || (await storage.getUserByFirebaseUid(targetUserId));
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      const deleted = await storage.deleteUser(user.id);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete user." });
+      }
+
+      return res.json({ success: true, message: `User '${user.name}' has been deleted successfully.` });
+    } catch (error: any) {
+      console.error("Admin delete user error:", error);
+      return res.status(500).json({ message: error.message || "Failed to delete user." });
+    }
+  });
+
   app.get("/api/admin/products", requireAdmin, async (_req: Request, res: Response) => {
     try {
       const products = await storage.getAllProducts();

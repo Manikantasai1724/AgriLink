@@ -140,6 +140,13 @@ vi.mock("../storage", () => {
       mockDb.users.set(user.firebaseUid || user.id, updated);
       return updated;
     }
+    async deleteUser(id: string) {
+      const user = Array.from(mockDb.users.values()).find((u) => u.id === id) || mockDb.users.get(id);
+      if (!user) return false;
+      mockDb.users.delete(user.firebaseUid || user.id);
+      if (user.id) mockDb.users.delete(user.id);
+      return true;
+    }
     async createProduct(data: any) {
       const product = { id: "prod-" + Date.now(), ...data };
       mockDb.products.set(product.id, product);

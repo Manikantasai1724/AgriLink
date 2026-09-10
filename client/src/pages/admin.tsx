@@ -28,7 +28,17 @@ import {
   Copy,
   Check,
   Key,
+  Trash2,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -39,6 +49,37 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<any | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  const handleDeleteUser = async (targetUserId: string) => {
+    setDeletingUserId(targetUserId);
+    try {
+      const token = localStorage.getItem("auth_token") || "";
+      const res = await fetch(`/api/admin/users/${targetUserId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "firebase-uid": user?.id || "",
+          "x-user-role": user?.role || "admin",
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to delete user");
+      }
+
+      toast.success(data.message || "User deleted successfully");
+      setConfirmDeleteUser(null);
+      refetchUsers();
+      refetchStats();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete user");
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   const togglePasswordVisibility = (userId: string) => {
     setVisiblePasswords((prev) => ({
@@ -329,6 +370,7 @@ export default function AdminPage() {
                           <TableHead>Farm / Business</TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead>Registered</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -413,6 +455,19 @@ export default function AdminPage() {
                             <TableCell className="text-xs text-muted-foreground">
                               {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
                             </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
+                                title={u.id === user.id ? "Cannot delete own admin account" : "Delete user"}
+                                disabled={u.id === user.id || deletingUserId === u.id}
+                                onClick={() => setConfirmDeleteUser(u)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -421,6 +476,43 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Confirmation Dialog for Deleting User */}
+            <Dialog open={!!confirmDeleteUser} onOpenChange={(open) => !open && setConfirmDeleteUser(null)}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-destructive">
+                    <Trash2 className="h-5 w-5" />
+                    Delete User Account
+                  </DialogTitle>
+                  <DialogDescription className="pt-2">
+                    Are you sure you want to permanently delete user{" "}
+                    <strong className="text-foreground font-semibold">{confirmDeleteUser?.name}</strong>{" "}
+                    (@{confirmDeleteUser?.username || "user"}, {confirmDeleteUser?.email})?
+                    <br />
+                    <span className="text-destructive font-medium block mt-2">
+                      This action cannot be undone and will revoke their system access.
+                    </span>
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-0 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmDeleteUser(null)}
+                    disabled={deletingUserId !== null}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => confirmDeleteUser && handleDeleteUser(confirmDeleteUser.id)}
+                    disabled={deletingUserId !== null}
+                  >
+                    {deletingUserId === confirmDeleteUser?.id ? "Deleting..." : "Delete User"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* TAB 2: SUBMITTED PRODUCE */}

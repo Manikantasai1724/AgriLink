@@ -329,5 +329,50 @@ describe("Role-Based Access Control (RBAC) Integration Tests", () => {
       expect(updateRes.body.role).toBe("logistics");
     });
   });
+
+  describe("Admin Delete User (DELETE /api/admin/users/:id)", () => {
+    it("should forbid non-admin users from deleting accounts", async () => {
+      const res = await request(app)
+        .delete("/api/admin/users/user-farmer")
+        .set("Authorization", "Bearer valid-token-farmer")
+        .set("firebase-uid", "uid123");
+
+      expect(res.status).toBe(403);
+    });
+
+    it("should prevent admin from deleting their own account", async () => {
+      const res = await request(app)
+        .delete("/api/admin/users/user-admin")
+        .set("Authorization", "Bearer valid-token-admin")
+        .set("firebase-uid", "uid-admin");
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain("cannot delete your own admin account");
+    });
+
+    it("should allow admin to delete another registered user", async () => {
+      // First create a sacrificial user
+      const regRes = await request(app)
+        .post("/api/auth/register")
+        .send({
+          name: "User To Delete",
+          email: "delete_me@agri.com",
+          username: "deleteme",
+          password: "DeletePass123!",
+          role: "farmer",
+        });
+
+      expect(regRes.status).toBe(201);
+      const targetUserId = regRes.body.user.id;
+
+      const deleteRes = await request(app)
+        .delete(`/api/admin/users/${targetUserId}`)
+        .set("Authorization", "Bearer valid-token-admin")
+        .set("firebase-uid", "uid-admin");
+
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.success).toBe(true);
+    });
+  });
 });
 

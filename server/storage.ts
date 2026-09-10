@@ -203,6 +203,12 @@ export class MongoStorage {
     return result as User;
   }
 
+  async deleteUser(id: string): Promise<boolean> {
+    const db = await getDb();
+    const result = await db.collection<User>("users").deleteOne({ id });
+    return result.deletedCount > 0;
+  }
+
   // -------- Product Operations --------
   async getProduct(id: string): Promise<Product | null> {
     const db = await getDb();
